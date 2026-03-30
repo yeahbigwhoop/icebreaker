@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>And Jus Lidat — Maui County</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400&display=swap" rel="stylesheet">
+  <style>
+    /* ── Password gate ── */
+    #pw-gate {
+      position: fixed; inset: 0; z-index: 9999;
+      background: var(--bg);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 1rem;
+    }
+    #pw-gate.hidden { display: none; }
+    #pw-form {
+      display: flex; flex-direction: column; align-items: center; gap: 0.75rem;
+    }
+    #pw-label {
+      font-family: 'Oswald', sans-serif;
+      font-size: 1.1rem; font-weight: 300;
+      letter-spacing: 0.08em; color: var(--muted);
+      text-transform: uppercase;
+    }
+    #pw-input {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 0.5rem; padding: 0.55rem 1rem;
+      color: var(--text); font-size: 1rem;
+      width: 220px; text-align: center;
+      outline: none; transition: border-color 0.15s;
+    }
+    #pw-input:focus { border-color: var(--accent); }
+    #pw-error {
+      font-size: 0.78rem; color: #e05555;
+      min-height: 1rem; text-align: center;
+    }
+  </style>
+  <style>
+    :root[data-theme="dark"] {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --border: #2a2d3a;
+      --text: #e2e8f0;
+      --muted: #8892a4;
+      --accent: #7c9ef8;
+      --accent-dim: rgba(124,158,248,0.12);
+      --toggle-bg: #2a2d3a;
+      --upcoming-bg: #141820;
+      --flag-bg: #1a1525; --flag-border: #3a2550; --flag-text: #c4a8f0;
+      --coming-bg: #0f1e18; --coming-border: #1e3d2e; --coming-text: #6bc49a;
+    }
+
+    :root[data-theme="light"] {
+      --bg: #f8f9fb;
+      --surface: #ffffff;
+      --border: #e2e6ed;
+      --text: #1a1d27;
+      --muted: #64748b;
+      --accent: #3b6ef0;
+      --accent-dim: rgba(59,110,240,0.08);
+      --toggle-bg: #e2e6ed;
+      --upcoming-bg: #f0f4ff;
+      --flag-bg: #f5f0ff; --flag-border: #d4b8f8; --flag-text: #6b3fa0;
+      --coming-bg: #f0faf5; --coming-border: #b8e8d0; --coming-text: #1a6b47;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.6;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    /* ── Header ── */
+    header {
+      position: sticky;
+      top: 0;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 1rem 2rem;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      z-index: 10;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--toggle-bg);
+      border: 1.5px solid var(--border);
+      border-radius: 2rem;
+      padding: 0.35rem 0.75rem;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 0.85rem;
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+                  box-shadow 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+                  background 0.15s, color 0.15s;
+      box-shadow: 2px 2px 0px var(--text);
+      transform: translate(0, 0);
+    }
+    .toggle:hover { transform: translate(-3px, -3px); box-shadow: 5px 5px 0px var(--text); }
+    .toggle:active { transform: translate(1px, 1px) scale(0.97); box-shadow: 1px 1px 0px var(--text); transition: transform 0.08s ease, box-shadow 0.08s ease; }
+    .toggle-active { background: var(--accent) !important; color: #fff !important; }
+    .toggle-icon { font-size: 1rem; }
+    .lang-divider { width: 1px; height: 1.2rem; background: var(--border); margin: 0 0.1rem; }
+
+    /* ── Layout ── */
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 4rem 2rem 6rem;
+    }
+
+    .hero {
+      margin-bottom: 3rem;
+    }
+
+    .blurb {
+      margin-top: 0.75rem;
+      font-size: 0.95rem;
+      color: var(--muted);
+      max-width: 560px;
+      line-height: 1.65;
+    }
+
+    .hero-eyebrow {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.4rem;
+    }
+
+    h1 {
+      font-family: "Oswald", sans-serif;
+      font-size: 5rem;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+
+    .content-layout {
+      display: grid;
+      grid-template-columns: 1fr 290px;
+      gap: 2.5rem;
+      align-items: start;
+    }
+
+    @media (max-width: 860px) {
+      .content-layout { grid-template-columns: 1fr; }
+      h1 { font-size: 3.5rem; }
+    }
+
+    /* ── Section label ── */
+    .section-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+
+    /* ── Upcoming meeting ── */
+    .upcoming-card {
+      background: var(--upcoming-bg);
+      border: 1.5px solid var(--accent);
+      border-radius: 0.75rem;
+      padding: 1.1rem 1.4rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .upcoming-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 0.5rem;
+    }
+
+    .upcoming-date {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .upcoming-badge {
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-dim);
+      padding: 0.15rem 0.55rem;
+      border-radius: 2rem;
+    }
+
+    .upcoming-note {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .upcoming-link {
+      font-size: 0.8rem;
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .upcoming-link:hover { text-decoration: underline; }
+
+    /* ── Meeting summaries ── */
+    .articles {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .article {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      padding: 1.25rem 1.4rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      overflow: hidden;
+      transition: background 0.15s;
+    }
+    .article:hover { background: var(--toggle-bg); }
+
+    .article-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      width: 100%;
+      gap: 1rem;
+    }
+
+    .article-title { font-size: 1rem; font-weight: 500; }
+
+    .article-date {
+      font-size: 0.8rem;
+      color: var(--muted);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .article-summary {
+      font-size: 0.9rem;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .article-image {
+      display: block;
+      width: calc(100% + 2.8rem);
+      margin: -1.25rem -1.4rem 1.1rem;
+      height: 220px;
+      object-fit: cover;
+    }
+
+    .article-placeholder { opacity: 0.6; }
+    .article-placeholder .article-summary { font-style: italic; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .sidebar-section {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Civil Beat news */
+    .news-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      overflow: hidden;
+    }
+
+    .news-item {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      transition: background 0.15s;
+    }
+    .news-item:last-child { border-bottom: none; }
+    .news-item:hover { background: var(--toggle-bg); }
+
+    .news-item a {
+      text-decoration: none;
+      color: var(--text);
+      font-size: 0.85rem;
+      font-weight: 500;
+      line-height: 1.4;
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+    .news-item a:hover { color: var(--accent); }
+
+    .news-meta {
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    .news-footer {
+      margin-top: 0.6rem;
+      font-size: 0.72rem;
+    }
+    .news-footer a {
+      color: var(--muted);
+      text-decoration: none;
+    }
+    .news-footer a:hover { color: var(--accent); }
+
+    /* Weather widget */
+    .weather-widget {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 0.85rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .weather-left {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .weather-icon { font-size: 1.4rem; line-height: 1; }
+
+    .weather-temp {
+      font-family: "Oswald", sans-serif;
+      font-size: 1.5rem;
+      font-weight: 400;
+      line-height: 1;
+      color: var(--text);
+    }
+
+    .weather-right {
+      text-align: right;
+    }
+
+    .weather-desc {
+      font-size: 0.8rem;
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .weather-meta {
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-top: 0.1rem;
+    }
+
+    .weather-location {
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 0.1rem;
+    }
+
+    /* Live cams */
+    .cams-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      overflow: hidden;
+    }
+
+    .cam-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.65rem 1rem;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    .cam-item:last-child { border-bottom: none; }
+    .cam-item:hover { background: var(--toggle-bg); }
+
+    .cam-item a {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text);
+      text-decoration: none;
+    }
+    .cam-item a:hover { color: var(--accent); }
+
+    .cam-badge {
+      font-size: 0.62rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #3bc87a;
+      background: rgba(60,200,120,0.12);
+      padding: 0.1rem 0.45rem;
+      border-radius: 2rem;
+    }
+
+    /* Quasi-judicial / Legislature / Opinion shared list */
+    .qj-list, .opinion-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      overflow: hidden;
+    }
+
+    .qj-item, .opinion-item {
+      padding: 0.75rem 1rem;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    .qj-item:last-child, .opinion-item:last-child { border-bottom: none; }
+
+    .qj-body { font-size: 0.82rem; font-weight: 500; color: var(--text); margin-bottom: 0.2rem; }
+    .qj-meta { font-size: 0.7rem; color: var(--muted); }
+    .qj-link { color: var(--accent); text-decoration: none; font-size: 0.7rem; }
+    .qj-link:hover { text-decoration: underline; }
+
+    .opinion-case { font-size: 0.82rem; font-weight: 500; color: var(--text); margin-bottom: 0.2rem; line-height: 1.4; }
+    .opinion-meta { font-size: 0.7rem; color: var(--muted); margin-bottom: 0.25rem; }
+    .opinion-note { font-size: 0.75rem; color: var(--muted); line-height: 1.5; font-style: italic; }
+
+    /* Legislature tracker */
+    .legis-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.65rem;
+      padding: 0.75rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .legis-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .legis-number { font-size: 0.78rem; font-weight: 700; color: var(--text); }
+
+    .legis-status {
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0.1rem 0.5rem;
+      border-radius: 2rem;
+      white-space: nowrap;
+    }
+    .status-watch    { background: rgba(250,180,60,0.15);  color: #f0a832; }
+    .status-enacted  { background: rgba(60,200,120,0.12);  color: #3bc87a; }
+    .status-risk     { background: rgba(240,80,80,0.12);   color: #e05555; }
+    .status-monitor  { background: rgba(124,158,248,0.15); color: var(--accent); }
+
+    .legis-title  { font-size: 0.8rem;  color: var(--muted); line-height: 1.4; }
+    .legis-note   { font-size: 0.75rem; color: var(--muted); line-height: 1.45; font-style: italic; }
+    .legis-updated { font-size: 0.68rem; color: var(--muted); opacity: 0.7; }
+
+    /* Section last-updated note */
+    .section-updated {
+      font-size: 0.68rem;
+      color: var(--muted);
+      opacity: 0.6;
+      margin-top: 0.4rem;
+    }
+
+    /* Budget snapshot */
+    .budget-snapshot {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1rem 1.1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .budget-hero {
+      display: flex;
+      flex-direction: column;
+      gap: 0.1rem;
+    }
+
+    .budget-hero-number {
+      font-family: "Oswald", sans-serif;
+      font-size: 2rem;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .budget-fy {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .budget-lines {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      border-top: 1px solid var(--border);
+      padding-top: 0.65rem;
+    }
+
+    .budget-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.5rem;
+    }
+
+    .budget-line-label {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .budget-line-value {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .budget-note {
+      font-size: 0.72rem;
+      color: var(--muted);
+      line-height: 1.5;
+      border-top: 1px solid var(--border);
+      padding-top: 0.65rem;
+    }
+
+    /* Bills tracker */
+    .bills-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .bill-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.65rem;
+      padding: 0.75rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .bill-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .bill-number {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .bill-status {
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0.1rem 0.5rem;
+      border-radius: 2rem;
+      white-space: nowrap;
+    }
+
+    .status-active {
+      background: rgba(250,180,60,0.15);
+      color: #f0a832;
+    }
+
+    .status-passed {
+      background: rgba(60,200,120,0.12);
+      color: #3bc87a;
+    }
+
+    .bill-title {
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .bill-updated {
+      font-size: 0.68rem;
+      color: var(--muted);
+      opacity: 0.7;
+    }
+
+    /* ── Contact section (full width) ── */
+    /* ── Marquee ── */
+    .marquee-wrap {
+      overflow: hidden;
+      white-space: nowrap;
+      position: relative;
+      margin-bottom: -2.8rem;
+      z-index: 0;
+      padding: 1.2rem 0;
+      pointer-events: none;
+    }
+
+    .marquee-track {
+      display: inline-flex;
+      animation: marquee-scroll 40s linear infinite;
+    }
+
+    .marquee-track span {
+      font-family: "Oswald", sans-serif;
+      font-size: 2.4rem;
+      font-weight: 400;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--border);
+      padding-right: 3rem;
+      user-select: none;
+    }
+
+    @keyframes marquee-scroll {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+
+    .contact-section {
+      position: relative;
+      z-index: 1;
+      margin-top: 3rem;
+      padding-top: 2.5rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .contact-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 10px;
+    }
+
+    .contact-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1rem 1.1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .contact-name { font-size: 0.9rem; font-weight: 600; color: var(--text); }
+
+    .contact-role {
+      font-size: 0.72rem;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.35rem;
+    }
+
+    .contact-links { display: flex; flex-direction: column; gap: 0.2rem; }
+
+    .contact-links a {
+      font-size: 0.76rem;
+      color: var(--muted);
+      text-decoration: none;
+      word-break: break-all;
+    }
+    .contact-links a:hover { color: var(--accent); }
+
+    .article-read-more {
+      display: inline-block;
+      margin-top: 0.75rem;
+      font-size: 0.72rem;
+      color: var(--muted);
+      text-decoration: none;
+      letter-spacing: 0.04em;
+      opacity: 0.7;
+      transition: opacity 0.15s, color 0.15s;
+    }
+    .article-read-more:hover { color: var(--accent); opacity: 1; }
+
+    /* Article actions row (links inside article-meta) */
+    .article-actions {
+      display: flex;
+      align-items: baseline;
+      gap: 0.9rem;
+      flex-shrink: 0;
+    }
+    .article-link {
+      font-size: 0.72rem;
+      color: var(--muted);
+      text-decoration: none;
+      letter-spacing: 0.04em;
+      opacity: 0.7;
+      transition: opacity 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+    .article-link:hover { color: var(--accent); opacity: 1; }
+
+    /* Legal/watch blocks */
+    .subsection-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 0.6rem;
+    }
+    .legal-watch {
+      background: var(--flag-bg);
+      border: 1px solid var(--flag-border);
+      border-radius: 0.5rem;
+      padding: 0.85rem 1rem;
+      margin-top: 0.5rem;
+    }
+    .legal-watch .subsection-label { color: var(--flag-text); }
+    .flag-list { list-style: none; display: flex; flex-direction: column; gap: 0.55rem; }
+    .flag-list li {
+      font-size: 0.82rem;
+      color: var(--text);
+      padding-left: 1.2rem;
+      position: relative;
+      line-height: 1.55;
+    }
+    .flag-list li::before {
+      content: "⚑";
+      position: absolute;
+      left: 0;
+      color: var(--flag-text);
+      font-size: 0.68rem;
+      top: 0.15em;
+    }
+    .coming-up {
+      background: var(--coming-bg);
+      border: 1px solid var(--coming-border);
+      border-radius: 0.5rem;
+      padding: 0.85rem 1rem;
+      margin-top: 0.5rem;
+    }
+    .coming-up .subsection-label { color: var(--coming-text); }
+    .coming-up p { font-size: 0.82rem; color: var(--muted); line-height: 1.65; }
+
+    /* Minimal placeholder card */
+    .article-placeholder {
+      opacity: 0.55;
+      padding: 0.65rem 1.4rem;
+    }
+    .article-placeholder .article-summary {
+      font-style: italic;
+      font-size: 0.8rem;
+    }
+
+    .contact-address {
+      margin-top: 0.9rem;
+      font-size: 0.76rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+
+<!-- Password gate -->
+<div id="pw-gate">
+  <form id="pw-form" onsubmit="checkPassword(event)">
+    <label id="pw-label" for="pw-input">Enter password</label>
+    <input id="pw-input" type="password" autocomplete="current-password" autofocus>
+    <div id="pw-error"></div>
+  </form>
+</div>
+
+<script>
+  (function() {
+    if (sessionStorage.getItem("unlocked") === "1") {
+      document.getElementById("pw-gate").classList.add("hidden");
+    }
+  })();
+
+  async function checkPassword(e) {
+    e.preventDefault();
+    const val = document.getElementById("pw-input").value;
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(val));
+    const hex = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,"0")).join("");
+    if (hex === "d754a0fb21f2b0cfc4cb57e7748ec97fe83c1b7d10ce1c962eb4a151e622b6c6") {
+      sessionStorage.setItem("unlocked", "1");
+      document.getElementById("pw-gate").classList.add("hidden");
+    } else {
+      const err = document.getElementById("pw-error");
+      err.textContent = "Incorrect password.";
+      document.getElementById("pw-input").value = "";
+      setTimeout(() => err.textContent = "", 2000);
+    }
+  }
+</script>
+
+<header>
+  <button class="toggle toggle-active" id="btn-en" onclick="setLang('en')"><span>🌐</span><span>English</span></button>
+  <button class="toggle" id="btn-pidgin" onclick="setLang('pidgin')"><span>🤙</span><span>Pidgin</span></button>
+  <button class="toggle" id="btn-olelo" onclick="setLang('olelo')"><span>🌺</span><span>ʻŌlelo</span></button>
+  <div class="lang-divider"></div>
+  <button class="toggle" onclick="toggleTheme()">
+    <span class="toggle-icon" id="toggle-icon">☀️</span>
+    <span id="toggle-label">Light</span>
+  </button>
+</header>
+
+<main>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1 data-en="Everyday I'm Council'n" data-pidgin="Everyday I'm Council'n" data-olelo="I Kēlā Me Kēia Lā, Council'n">Everyday I'm Council'n</h1>
+    <p class="blurb" data-en="Maui County Council meeting summaries — focused on key votes, legal and administrative implications, and items worth keeping an eye on." data-pidgin="Meeting summaries from da Maui County Council — wat wen happen, wat fo watch out for, and wat stay coming up." data-olelo="Nā hōʻuluʻulu halawai no ke Kūkaʻi Kaunti o Maui — me ka nānā ʻana i nā koho nui, nā hopena, a me nā mea e nānā ai.">Maui County Council meeting summaries — focused on key votes, legal and administrative implications, and items worth keeping an eye on.</p>
+  </section>
+
+  <!-- Two-column layout -->
+  <div class="content-layout">
+
+    <!-- ── Primary column ── -->
+    <div class="primary">
+
+      <!-- Upcoming meeting -->
+      <p class="section-label" data-en="Next Meeting" data-pidgin="Coming Up Next" data-olelo="Ka Halawai Aʻe">Next Meeting</p>
+      <div class="upcoming-card">
+        <div class="upcoming-header">
+          <span class="upcoming-date" data-en="April 3, 2026" data-pidgin="April 3, 2026" data-olelo="ʻApelila 3, 2026">April 3, 2026</span>
+          <span class="upcoming-badge" data-en="Agenda Pending" data-pidgin="Agenda Coming" data-olelo="Kāki ʻia ana">Agenda Pending</span>
+        </div>
+        <p class="upcoming-note" data-en="The agenda for this meeting has not yet been published. Check back closer to the meeting date, or view the county's official agenda center." data-pidgin="No mo agenda yet for dis one. Check back lata or go look at da county site." data-olelo="ʻAʻole i paʻi ʻia ka papa hana o kēia halawai. E hoʻi mai a nānā paha i ka pūnaewele kaunti.">The agenda for this meeting has not yet been published. Check back closer to the meeting date, or view the county's official agenda center.</p>
+        <a class="upcoming-link" href="https://www.mauicounty.gov/AgendaCenter" target="_blank" rel="noopener">View official agenda center →</a>
+      </div>
+
+      <!-- Meeting summaries -->
+      <p class="section-label" data-en="Meeting Summaries" data-pidgin="Da Meetings" data-olelo="Nā Hōʻuluʻulu Halawai">Meeting Summaries</p>
+      <div class="articles">
+
+        <!-- Placeholder: Mar 20, 2026 -->
+        <div class="article article-placeholder">
+          <div class="article-meta">
+            <span class="article-title" data-en="Regular Council Meeting — Mar 20, 2026" data-pidgin="Da Council — Mar 20, 2026" data-olelo="Ke Kūkaʻi Kaunti — Malaki 20, 2026">Regular Council Meeting — Mar 20, 2026</span>
+            <span class="article-date">Transcript pending</span>
+          </div>
+        </div>
+
+        <!-- March 6, 2026 -->
+        <div class="article">
+          <div class="article-meta">
+            <span class="article-title" data-en="Regular Council Meeting — March 6, 2026" data-pidgin="Da Council — March 6, 2026" data-olelo="Ke Kūkaʻi Kaunti — Malaki 6, 2026">Regular Council Meeting — March 6, 2026</span>
+            <div class="article-actions">
+              <span class="article-date">Mar 6, 2026</span>
+              <a class="article-link" href="https://mauicounty.us/videos/" target="_blank" rel="noopener">watch video ↗</a>
+              <a class="article-link" href="https://www.mauicounty.gov/Archive.aspx?AMID=226" target="_blank" rel="noopener">transcript ↗</a>
+            </div>
+          </div>
+          <p class="article-summary">A dense session running 9:08 a.m.–5:37 p.m. The headline: the council voted unanimously (0–9) to reject Bill 92 — which would have authorized a new FBI Joint Terrorism Task Force intergovernmental agreement — then immediately passed Reso 26-56 (8–0–1) urging the Mayor to terminate the <em>existing</em> 2007 MPD-FBI JTTF agreement. On housing, Bill 116 CD1 cleared first reading unanimously: it would exempt below-market affordable housing leases from competitive bidding requirements and Council approval, while adding annual reporting obligations. Final readings completed on the $10M DWS water system integration and $3M IT/cybersecurity bills first read in February. First readings opened on a batch of budget amendments covering emergency management reallocation, War Memorial Gym repairs ($800K), parks operations ($550K), and federal housing grants (HOME-ARP, ESG, CDBG). The council also adopted resolutions urging state action on the Pāʻia Bypass and a ban on commercial aquarium harvesting, and urged denial of the Air Force's Haleakalā telescope EIS. Bill 34 (Kamalani Ventures LLC affordable housing repayment) was cancelled by the clerk without reaching a floor vote.</p>
+          <div class="legal-watch">
+            <span class="subsection-label">⚑ Worth Watching</span>
+            <ul class="flag-list">
+              <li><strong>FBI JTTF (Bill 92 failed / Reso 26-56 passed):</strong> The council rejected the new JTTF IGA 0–9, then urged the Mayor to terminate the existing 2007 agreement 8–0–1. Reso 26-56 is precatory — the Mayor controls executive IGAs — but the signal is unanimous. Worth reviewing the legal mechanism for IGA termination, any required federal notice, and potential impacts on information-sharing arrangements or mutual aid obligations under federal law.</li>
+              <li><strong>Bill 116 CD1 — lease exemptions (first reading):</strong> Amends MCC 3.36 and 3.40 to bypass competitive bidding and Council approval for certain affordable housing leases. Charter §8-8 compliance review is warranted before second reading, particularly whether the County may delegate or waive Council oversight of property dispositions by ordinance.</li>
+              <li><strong>Bill 34 cancellation (Kamalani Ventures LLC):</strong> This bill — adding conditional repayment language for Kamalani Ventures LLC in the Affordable Housing Fund — was pulled at the clerk level, not tabled or deferred. The reason is unstated in the transcript. Worth ascertaining whether a dispute, negotiation, or litigation is pending with Kamalani Ventures, and whether the cancellation affects any contractual obligation to seek repayment.</li>
+              <li><strong>Bill 38 — General Plan ordinance amendment (first reading, as amended):</strong> Amends MCC Chapter 2.80B governing the General Plan and Community Plans process. Changes here can affect standing, timelines, and scope of review in land use challenges. Watch for the amendment text and second reading.</li>
+              <li><strong>Resos 26-57/58 — grant fund reassignment to Kaiahale Kahiluhilu LPs:</strong> Affordable housing grants transferred from Hui Kauhale, Inc. to two new limited partnerships. Worth confirming that grant assignment documentation is complete, any prior security interests transfer correctly, and that the County's compliance obligations under the original grant follow the new entities.</li>
+            </ul>
+          </div>
+          <div class="coming-up">
+            <span class="subsection-label">↻ Coming Up</span>
+            <p>April 2 agenda already posted. Second readings pending for Bills 38, 27 CD1, 14, 116 CD1, 39, 44, 46, 40, 41, 42, 45, and 43. Note: two emergency meetings were held March 20 to address $15M in storm-recovery appropriations (Bills 53 &amp; 54) — Worth confirming those emergency procedures complied with HRS §92-3.7 notice requirements. Bill 34 (Kamalani Ventures) may return. FY2027 budget season is now open.</p>
+          </div>
+        </div>
+
+        <!-- February 18, 2026 -->
+        <div class="article">
+          <div class="article-meta">
+            <span class="article-title" data-en="Regular Council Meeting — February 18, 2026" data-pidgin="Da Council — February 18, 2026" data-olelo="Ke Kūkaʻi Kaunti — Pepeluali 18, 2026">Regular Council Meeting — February 18, 2026</span>
+            <div class="article-actions">
+              <span class="article-date">Feb 18, 2026</span>
+              <a class="article-link" href="https://mauicounty.us/videos/" target="_blank" rel="noopener">watch video ↗</a>
+              <a class="article-link" href="https://www.mauicounty.gov/Archive.aspx?AMID=226" target="_blank" rel="noopener">transcript ↗</a>
+            </div>
+          </div>
+          <p class="article-summary">Twenty-three board and commission appointments were confirmed — one of the larger single-meeting batches of the term. The council passed Bill 183 (6–1–2) on second and final reading, amending the West Maui Community Plan to set a 30-foot height limit for the Lāhainā Historic Landmark District, a key post-fire rebuilding constraint. First readings cleared for the $10M DWS water system integration bill and $3M IT/cybersecurity bill, both of which returned for final passage on March 6. The county accepted a donation of four Compact Rapid Deployable cell towers for fire and public safety use. Bill 17 (repealing social host liability provisions) passed its final reading, reducing a category of civil exposure for the county.</p>
+          <div class="legal-watch">
+            <span class="subsection-label">⚑ Worth Watching</span>
+            <ul class="flag-list">
+              <li><strong>Bill 183 — Lāhainā 30-ft height limit (6–1–2):</strong> The slim margin and two excused members are worth noting. A blanket height restriction codified in a community plan amendment may be challenged by affected property owners on takings grounds or as inconsistent with state land use law or SMA requirements. Worth assessing litigation exposure and confirm the legislative record contains adequate findings supporting the restriction. A future reconsideration motion could succeed if attendance shifts.</li>
+              <li><strong>23 board and commission appointments:</strong> Volume creates statistical likelihood that at least one appointment deviated from charter or MCC procedural requirements. Routine spot-check is advisable, particularly for boards with quasi-judicial functions (e.g., Board of Variances and Appeals, Board of Ethics) where appointment defects could affect the validity of subsequent decisions.</li>
+              <li><strong>Cell tower donation acceptance:</strong> Accepted under MCC 3.56.030. Worth confirming the donation agreement clearly limits County liability for equipment failure in the field, establishes no ongoing maintenance obligation by the donor, and does not create a commercial relationship that would require competitive procurement for future support.</li>
+              <li><strong>Bill 17 (social host liability repeal) — enacted:</strong> Removal of social host liability provisions reduces one litigation exposure category. Verify effective date and whether any claims filed under the prior provision remain active and how repeal affects them.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- February 6, 2026 -->
+        <div class="article">
+          <div class="article-meta">
+            <span class="article-title" data-en="Regular Council Meeting — February 6, 2026" data-pidgin="Da Council — February 6, 2026" data-olelo="Ke Kūkaʻi Kaunti — Pepeluali 6, 2026">Regular Council Meeting — February 6, 2026</span>
+            <div class="article-actions">
+              <span class="article-date">Feb 6, 2026</span>
+              <a class="article-link" href="https://mauicounty.us/videos/" target="_blank" rel="noopener">watch video ↗</a>
+              <a class="article-link" href="https://www.mauicounty.gov/Archive.aspx?AMID=226" target="_blank" rel="noopener">transcript ↗</a>
+            </div>
+          </div>
+          <p class="article-summary">The meeting opened with recognition of Kamehameha Schools Maui football's second consecutive state championship. Bill 15 passed final reading, authorizing factory-built housing in the Lāhainā burn zone — with a last-minute floor amendment requiring that the manufacturing facilities themselves be Hawaii-based. A $10M budget amendment for the Kula Agriculture Park and $886K in opioid settlement expenditures were approved. Kehalani Apartments received affordable housing exemptions enabling a May 2026 construction start. Hale Pilina grant funding was redistributed to keep that project on track. Bill 2 (Board of Ethics salary reform) and Bill 17 (social host liability repeal) each had their first readings.</p>
+          <div class="legal-watch">
+            <span class="subsection-label">⚑ Worth Watching</span>
+            <ul class="flag-list">
+              <li><strong>Bill 15 — Hawaii-only factory requirement (enacted):</strong> The floor amendment requiring that factory-built housing manufacturers be Hawaii-based is a significant dormant Commerce Clause risk. Geographic preferences for in-state businesses over out-of-state competitors are subject to strict scrutiny under the U.S. Constitution and have frequently been struck down. A formal legal opinion on the provision's defensibility would be prudent before the County invests in program implementation.</li>
+              <li><strong>Opioid settlement funds ($886K):</strong> These expenditures must comply with the use restrictions defined in the applicable settlement agreement and any associated abatement plan. Worth verifying that approved uses match the settlement terms and that documentation is maintained for required reporting to the settlement administrator.</li>
+              <li><strong>Kehalani Apartments — May 2026 construction deadline:</strong> The exemptions granted are conditioned on a May 2026 construction start. If that deadline is missed, the legal basis for the exemptions may lapse and the project could require reapproval. Flag for monitoring.</li>
+              <li><strong>Bill 2 — Board of Ethics compensation (first reading):</strong> Compensating Board of Ethics members raises questions about charter intent (the board is typically designed as an independent volunteer citizen body), potential conflicts of interest for compensated members, and whether compensation is authorized without a charter amendment. Watch for second reading.</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /primary -->
+
+    <!-- ── Sidebar ── -->
+    <aside class="sidebar">
+
+      <!-- In The News -->
+      <div class="sidebar-section">
+        <p class="section-label">In The News</p>
+        <div class="news-list" id="news-list">
+          <div class="news-item" style="color:var(--muted);font-size:0.82rem;">Loading…</div>
+        </div>
+        <p class="news-footer">
+          <a href="https://www.civilbeat.org/category/maui/" target="_blank" rel="noopener">Civil Beat</a> ·
+          <a href="https://mauinow.com/" target="_blank" rel="noopener">Maui Now</a>
+        </p>
+      </div>
+
+      <!-- Quasi-Judicial Calendar -->
+      <div class="sidebar-section">
+        <p class="section-label">Quasi-Judicial Calendar</p>
+        <div class="qj-list" id="qj-list">
+          <div class="qj-item"><span class="qj-meta">Loading upcoming hearings…</span></div>
+        </div>
+        <p class="news-footer"><a href="https://www.mauicounty.gov/AgendaCenter" target="_blank" rel="noopener">Full agenda center →</a></p>
+      </div>
+
+      <!-- State Legislature Watch -->
+      <div class="sidebar-section">
+        <p class="section-label">State Legislature Watch</p>
+        <div class="bills-list">
+
+          <div class="legis-item">
+            <div class="legis-header">
+              <span class="legis-number">HB2236 / SB2151</span>
+              <span class="legis-status status-risk">High Risk</span>
+            </div>
+            <div class="legis-title">Emergency management powers expansion — codifies governor/county authority to quarantine, enter private property, suspend laws, and seize infrastructure during declared disasters.</div>
+            <div class="legis-note">Broad delegation of emergency authority raises due process and takings concerns. Monitor for amendments limiting scope or adding judicial review requirements before enactment.</div>
+            <div class="legis-updated">In committee · 2026 session</div>
+          </div>
+
+          <div class="legis-item">
+            <div class="legis-header">
+              <span class="legis-number">SB2337</span>
+              <span class="legis-status status-enacted">Enacted</span>
+            </div>
+            <div class="legis-title">Expands county authority to exercise HHFDC powers for mixed-use housing development.</div>
+            <div class="legis-note">Broadens county financing tools for affordable housing. Review whether new authority requires MCC amendments or new procurement rules before use.</div>
+            <div class="legis-updated">Enacted · 2026 session</div>
+          </div>
+
+          <div class="legis-item">
+            <div class="legis-header">
+              <span class="legis-number">HB2090</span>
+              <span class="legis-status status-enacted">Enacted</span>
+            </div>
+            <div class="legis-title">Requires counties to adopt ordinances allowing adaptive reuse of commercial buildings for residential use (above ground floor).</div>
+            <div class="legis-note">Effective 1/1/2026 — Maui County must adopt conforming ordinances. Confirm timeline and whether failure to act creates any legal exposure or preemption issues.</div>
+            <div class="legis-updated">Effective Jan 1, 2026</div>
+          </div>
+
+          <div class="legis-item">
+            <div class="legis-header">
+              <span class="legis-number">Land Use Bills</span>
+              <span class="legis-status status-monitor">Monitor</span>
+            </div>
+            <div class="legis-title">Multiple 2026 bills would shift land use district boundary authority to counties and expand agricultural worker housing exemptions.</div>
+            <div class="legis-note">If enacted, would expand county land use jurisdiction — assess consistency with current General Plan and community plan processes.</div>
+            <div class="legis-updated">In committee · 2026 session</div>
+          </div>
+
+        </div>
+        <p class="news-footer"><a href="https://www.capitol.hawaii.gov/" target="_blank" rel="noopener">Hawaii Legislature →</a></p>
+      </div>
+
+      <!-- Recent Appellate Decisions -->
+      <div class="sidebar-section">
+        <p class="section-label">Recent Appellate Decisions</p>
+        <div class="opinion-list">
+
+          <div class="opinion-item">
+            <div class="opinion-case">Deutsche Bank Nat'l Trust Co. Americas v. Ru</div>
+            <div class="opinion-meta">Hawaii Supreme Court · Mar 24, 2026 · SCWC-23-0000662</div>
+            <div class="opinion-note">Certiorari accepted — foreclosure/mortgage dispute. Watch for decision; Hawaii foreclosure procedure affects county tax sale and lien priority issues.</div>
+          </div>
+
+          <div class="opinion-item">
+            <div class="opinion-case">In re: Tax Appeal of Vreugdenhil &amp; Nakayama</div>
+            <div class="opinion-meta">ICA · Mar 25, 2026 · CAAP-25-0000524</div>
+            <div class="opinion-note">Tax Appeal Court affirmed. Property tax valuation appeals remain active litigation vector for Maui County; track methodology rulings.</div>
+          </div>
+
+        </div>
+        <p class="news-footer section-updated">Updated by scheduled task · <a href="https://www.courts.state.hi.us/opinions_and_orders/opinions" target="_blank" rel="noopener">All opinions →</a></p>
+      </div>
+
+      <!-- Budget Snapshot -->
+      <div class="sidebar-section">
+        <p class="section-label">Budget Snapshot</p>
+        <div class="budget-snapshot">
+          <div class="budget-hero">
+            <span class="budget-hero-number">$1.62B</span>
+            <span class="budget-fy">FY2027 Proposed</span>
+          </div>
+          <div class="budget-lines">
+            <div class="budget-line">
+              <span class="budget-line-label">Affordable Housing</span>
+              <span class="budget-line-value">$79.5M</span>
+            </div>
+            <div class="budget-line">
+              <span class="budget-line-label">Water Systems</span>
+              <span class="budget-line-value">$44.5M</span>
+            </div>
+            <div class="budget-line">
+              <span class="budget-line-label">Capital Improvements</span>
+              <span class="budget-line-value">$698.2M</span>
+            </div>
+            <div class="budget-line">
+              <span class="budget-line-label">Outstanding General Debt</span>
+              <span class="budget-line-value">$336.2M</span>
+            </div>
+            <div class="budget-line">
+              <span class="budget-line-label">Debt Service (% of ops)</span>
+              <span class="budget-line-value">6.2% <span style="font-size:0.68rem;color:var(--muted)">cap 10%</span></span>
+            </div>
+            <div class="budget-line">
+              <span class="budget-line-label">CDBG-DR Recovery Funds</span>
+              <span class="budget-line-value">$1.6B</span>
+            </div>
+          </div>
+          <p class="budget-note">FY2027 proposed up ~4% from FY2026's $1.56B. Debt at 3.3% of taxable assessed value (legal limit 15%). Council vote pending.</p>
+          <a class="upcoming-link" href="https://www.mauicounty.gov/budget" target="_blank" rel="noopener">Full budget documents →</a>
+        </div>
+      </div>
+
+      <!-- County Bills Tracker -->
+      <div class="sidebar-section">
+        <p class="section-label">County Bills Tracker</p>
+        <div class="bills-list">
+
+          <div class="bill-item">
+            <div class="bill-header">
+              <span class="bill-number">Bill 116 CD1</span>
+              <span class="bill-status status-active">Active</span>
+            </div>
+            <div class="bill-title">Exempts below-market affordable housing leases from competitive bidding and Council approval; adds annual reporting.</div>
+            <div class="bill-updated">Next action: 2nd reading Apr 2, 2026</div>
+          </div>
+
+          <div class="bill-item">
+            <div class="bill-header">
+              <span class="bill-number">Bill 38</span>
+              <span class="bill-status status-active">Active</span>
+            </div>
+            <div class="bill-title">Amends MCC Ch. 2.80B — General Plan and Community Plans process (affects land use challenge standing and timelines).</div>
+            <div class="bill-updated">Next action: 2nd reading Apr 2, 2026</div>
+          </div>
+
+          <div class="bill-item">
+            <div class="bill-header">
+              <span class="bill-number">Bill 2</span>
+              <span class="bill-status status-active">Active</span>
+            </div>
+            <div class="bill-title">Board of Ethics salary reform — adjusts compensation for Ethics Board members.</div>
+            <div class="bill-updated">1st reading Feb 6 · 2nd reading pending</div>
+          </div>
+
+          <div class="bill-item">
+            <div class="bill-header">
+              <span class="bill-number">Bill 183</span>
+              <span class="bill-status status-passed">Passed</span>
+            </div>
+            <div class="bill-title">30-ft height limit, Lāhainā Historic Landmark District (West Maui Community Plan amendment).</div>
+            <div class="bill-updated">Passed 6-1-2 · Feb 18, 2026</div>
+          </div>
+
+          <div class="bill-item">
+            <div class="bill-header">
+              <span class="bill-number">Bill 15</span>
+              <span class="bill-status status-passed">Passed</span>
+            </div>
+            <div class="bill-title">Factory-built housing in Lāhainā burn zone; Hawaii-based factories only.</div>
+            <div class="bill-updated">Passed · Feb 6, 2026</div>
+          </div>
+
+        </div>
+      </div>
+
+    </aside><!-- /sidebar -->
+
+  </div><!-- /content-layout -->
+
+  <!-- Contact — full width -->
+  <div class="marquee-wrap" aria-hidden="true">
+    <div class="marquee-track">
+      <span>And Jus Lidat &nbsp;·&nbsp; in Maui County &nbsp;·&nbsp; </span>
+      <span>And Jus Lidat &nbsp;·&nbsp; in Maui County &nbsp;·&nbsp; </span>
+      <span>And Jus Lidat &nbsp;·&nbsp; in Maui County &nbsp;·&nbsp; </span>
+      <span>And Jus Lidat &nbsp;·&nbsp; in Maui County &nbsp;·&nbsp; </span>
+      <span>And Jus Lidat &nbsp;·&nbsp; in Maui County &nbsp;·&nbsp; </span>
+      <span>And Jus Lidat &nbsp;·&nbsp; in Maui County &nbsp;·&nbsp; </span>
+      <span>And Jus Lidat &nbsp;·&nbsp; in Maui County &nbsp;·&nbsp; </span>
+      <span>And Jus Lidat &nbsp;·&nbsp; in Maui County &nbsp;·&nbsp; </span>
+    </div>
+  </div>
+
+  <section class="contact-section">
+    <p class="section-label" data-en="Contact Your Council" data-pidgin="Talk Story Wit Your Council" data-olelo="Kelepona i Kou Kūkaʻi">Contact Your Council</p>
+    <div class="contact-list">
+      <div class="contact-card">
+        <div class="contact-name">Alice Lee</div>
+        <div class="contact-role" data-en="Chair" data-pidgin="Da Chair" data-olelo="Pelekikena">Chair</div>
+        <div class="contact-links">
+          <a href="tel:+18082707760">(808) 270-7760</a>
+          <a href="mailto:Alice.Lee@mauicounty.us">Alice.Lee@mauicounty.us</a>
+        </div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">Yuki Lei Sugimura</div>
+        <div class="contact-role" data-en="Vice-Chair" data-pidgin="Da Vice-Chair" data-olelo="Hope Pelekikena">Vice-Chair</div>
+        <div class="contact-links">
+          <a href="tel:+18082707939">(808) 270-7939</a>
+          <a href="mailto:YukiLei.Sugimura@mauicounty.us">YukiLei.Sugimura@mauicounty.us</a>
+        </div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">Tasha Kama</div>
+        <div class="contact-role" data-en="Pro Tempore" data-pidgin="Pro Tempore" data-olelo="Pro Tempore">Pro Tempore</div>
+        <div class="contact-links">
+          <a href="tel:+18082705501">(808) 270-5501</a>
+          <a href="mailto:Tasha.Kama@mauicounty.us">Tasha.Kama@mauicounty.us</a>
+        </div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">Tom Cook</div>
+        <div class="contact-role" data-en="Councilmember" data-pidgin="Council Guy" data-olelo="Lālā Kūkaʻi">Councilmember</div>
+        <div class="contact-links">
+          <a href="tel:+18082707108">(808) 270-7108</a>
+          <a href="mailto:thomas.cook@mauicounty.us">thomas.cook@mauicounty.us</a>
+        </div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">Gabe Johnson</div>
+        <div class="contact-role" data-en="Councilmember" data-pidgin="Council Guy" data-olelo="Lālā Kūkaʻi">Councilmember</div>
+        <div class="contact-links">
+          <a href="tel:+18082707768">(808) 270-7768</a>
+          <a href="mailto:gabe.johnson@mauicounty.us">gabe.johnson@mauicounty.us</a>
+        </div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">Tamara Paltin</div>
+        <div class="contact-role" data-en="Councilmember" data-pidgin="Council Lady" data-olelo="Lālā Kūkaʻi">Councilmember</div>
+        <div class="contact-links">
+          <a href="tel:+18082705504">(808) 270-5504</a>
+          <a href="mailto:Tamara.Paltin@mauicounty.us">Tamara.Paltin@mauicounty.us</a>
+        </div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">Keani Rawlins-Fernandez</div>
+        <div class="contact-role" data-en="Councilmember" data-pidgin="Council Lady" data-olelo="Lālā Kūkaʻi">Councilmember</div>
+        <div class="contact-links">
+          <a href="tel:+18082707678">(808) 270-7678</a>
+          <a href="mailto:Keani.Rawlins@mauicounty.us">Keani.Rawlins@mauicounty.us</a>
+        </div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">Shane Sinenci</div>
+        <div class="contact-role" data-en="Councilmember" data-pidgin="Council Guy" data-olelo="Lālā Kūkaʻi">Councilmember</div>
+        <div class="contact-links">
+          <a href="tel:+18082707246">(808) 270-7246</a>
+          <a href="mailto:Shane.Sinenci@mauicounty.us">Shane.Sinenci@mauicounty.us</a>
+        </div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-name">Nohe Uʻu-Hodgins</div>
+        <div class="contact-role" data-en="Councilmember" data-pidgin="Council Lady" data-olelo="Lālā Kūkaʻi">Councilmember</div>
+        <div class="contact-links">
+          <a href="tel:+18082705507">(808) 270-5507</a>
+          <a href="mailto:nohe.uu-hodgins@mauicounty.us">nohe.uu-hodgins@mauicounty.us</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  let currentLang = "en";
+
+  function setLang(lang) {
+    currentLang = lang;
+    document.querySelectorAll("[data-en]").forEach(el => {
+      el.innerHTML = el.getAttribute("data-" + lang) || el.getAttribute("data-en");
+    });
+    document.getElementById("btn-en").classList.toggle("toggle-active",    lang === "en");
+    document.getElementById("btn-pidgin").classList.toggle("toggle-active", lang === "pidgin");
+    document.getElementById("btn-olelo").classList.toggle("toggle-active",  lang === "olelo");
+    localStorage.setItem("lang", lang);
+  }
+
+  function toggleTheme() {
+    const html = document.documentElement;
+    const isDark = html.getAttribute("data-theme") === "dark";
+    html.setAttribute("data-theme", isDark ? "light" : "dark");
+    document.getElementById("toggle-icon").textContent = isDark ? "🌙" : "☀️";
+    document.getElementById("toggle-label").textContent = isDark ? "Dark" : "Light";
+    localStorage.setItem("theme", isDark ? "light" : "dark");
+  }
+
+  const savedTheme = localStorage.getItem("theme");
+  if (savedTheme) {
+    document.documentElement.setAttribute("data-theme", savedTheme);
+    if (savedTheme === "light") {
+      document.getElementById("toggle-icon").textContent = "🌙";
+      document.getElementById("toggle-label").textContent = "Dark";
+    }
+  }
+
+  const savedLang = localStorage.getItem("lang");
+  if (savedLang && savedLang !== "en") setLang(savedLang);
+
+  // ── Quasi-Judicial Calendar ─────────────────────────────────────────────
+  async function loadQJCalendar() {
+    const bodies = [
+      { label: "Maui Planning Commission",      url: "https://www.mauicounty.gov/RSSFeed.aspx?ModID=65&CID=Maui-Planning-Commission-28" },
+      { label: "Board of Variances & Appeals",  url: "https://www.mauicounty.gov/RSSFeed.aspx?ModID=65&CID=Board-of-Variances-and-Appeals-13" },
+      { label: "Liquor Control Adjudication",   url: "https://www.mauicounty.gov/RSSFeed.aspx?ModID=65&CID=Liquor-Control-Adjudication-Board-25" },
+      { label: "Liquor Control Commission",     url: "https://www.mauicounty.gov/RSSFeed.aspx?ModID=65&CID=Liquor-Control-Commission-26" },
+    ];
+    const proxy = "https://api.rss2json.com/v1/api.json?rss_url=";
+    const el = document.getElementById("qj-list");
+    const now = new Date();
+    let items = [];
+
+    await Promise.all(bodies.map(async b => {
+      try {
+        const r = await fetch(proxy + encodeURIComponent(b.url));
+        const d = await r.json();
+        (d.items || []).forEach(item => {
+          const date = new Date(item.pubDate);
+          if (date >= now) // upcoming only
+            items.push({ label: b.label, title: item.title, date, link: item.link });
+        });
+      } catch(e) {}
+    }));
+
+    items.sort((a, b) => a.date - b.date);
+    items = items.slice(0, 8);
+
+    if (!items.length) {
+      el.innerHTML = `<div class="qj-item">
+        <div class="qj-meta">No upcoming hearings found in feed — <a class="qj-link" href="https://www.mauicounty.gov/AgendaCenter" target="_blank">check agenda center</a></div>
+      </div>`;
+      return;
+    }
+
+    el.innerHTML = items.map(item => {
+      const dateStr = item.date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+      return `<div class="qj-item">
+        <div class="qj-body"><a class="qj-link" href="${item.link || "https://www.mauicounty.gov/AgendaCenter"}" target="_blank" rel="noopener">${item.title || item.label}</a></div>
+        <div class="qj-meta">${item.label} · ${dateStr}</div>
+      </div>`;
+    }).join("");
+  }
+  loadQJCalendar();
+
+  // ── News — Maui civic focus, last 48 h, sports/school filtered out ────
+  async function loadNews() {
+    const feeds = [
+      { url: "https://www.civilbeat.org/category/maui/feed/", source: "Civil Beat" },
+      { url: "https://mauinow.com/feed/",                     source: "Maui Now"   },
+    ];
+    const proxy  = "https://api.rss2json.com/v1/api.json?rss_url=";
+    const cutoff = Date.now() - 48 * 60 * 60 * 1000;
+    const skipRe = /\b(football|basketball|baseball|softball|soccer|volleyball|golf|tennis|swim(?:ming)?|surf contest|paddling|canoe|regatta|high school|prep sport|game recap|box score|tournament|playoff|state champ(?:ionship)?|prom|homecoming|graduation|grad night|little league|interscholastic)\b/i;
+
+    let items = [];
+    await Promise.all(feeds.map(async feed => {
+      try {
+        const r = await fetch(proxy + encodeURIComponent(feed.url));
+        const d = await r.json();
+        (d.items || []).forEach(item => {
+          const pub = new Date(item.pubDate).getTime();
+          if (pub >= cutoff && !skipRe.test(item.title))
+            items.push({ title: item.title, link: item.link, date: new Date(item.pubDate), source: feed.source });
+        });
+      } catch(e) {}
+    }));
+
+    items.sort((a, b) => b.date - a.date);
+    items = items.slice(0, 6);
+
+    const container = document.getElementById("news-list");
+    if (!items.length) {
+      container.innerHTML = `<div class="news-item"><span style="font-size:0.82rem;color:var(--muted)">No recent Maui civic news — check sources below.</span></div>`;
+      return;
+    }
+
+    const now = new Date();
+    container.innerHTML = items.map(item => {
+      const diffH = Math.floor((now - item.date) / 3600000);
+      const age   = diffH >= 24 ? `${Math.floor(diffH/24)}d ago` : diffH >= 1 ? `${diffH}h ago` : "Just now";
+      return `<div class="news-item">
+        <a href="${item.link}" target="_blank" rel="noopener">${item.title}</a>
+        <span class="news-meta">${item.source} · ${age}</span>
+      </div>`;
+    }).join("");
+  }
+  loadNews();
+</script>
+
+</body>
+</html>
