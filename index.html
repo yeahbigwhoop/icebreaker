@@ -1265,11 +1265,7 @@
 
   <!-- Contact — full width -->
   <div class="marquee-wrap" aria-hidden="true">
-    <div class="marquee-track">
-      <span>And Jus Lidat &nbsp;·&nbsp; in Maui County &nbsp;·&nbsp; </span>
-      <span>And Jus Lidat &nbsp;·&nbsp; in Maui County &nbsp;·&nbsp; </span>
-      <span>And Jus Lidat &nbsp;·&nbsp; in Maui County &nbsp;·&nbsp; </span>
-      <span>And Jus Lidat &nbsp;·&nbsp; in Maui County &nbsp;·&nbsp; </span>
+    <div class="marquee-track" id="marquee-track">
       <span>And Jus Lidat &nbsp;·&nbsp; in Maui County &nbsp;·&nbsp; </span>
       <span>And Jus Lidat &nbsp;·&nbsp; in Maui County &nbsp;·&nbsp; </span>
       <span>And Jus Lidat &nbsp;·&nbsp; in Maui County &nbsp;·&nbsp; </span>
@@ -1361,14 +1357,18 @@
   let currentLang = "en";
 
   function setLang(lang) {
-    currentLang = lang;
-    document.querySelectorAll("[data-en]").forEach(el => {
-      el.innerHTML = el.getAttribute("data-" + lang) || el.getAttribute("data-en");
-    });
-    document.getElementById("btn-en").classList.toggle("toggle-active",    lang === "en");
-    document.getElementById("btn-pidgin").classList.toggle("toggle-active", lang === "pidgin");
-    document.getElementById("btn-olelo").classList.toggle("toggle-active",  lang === "olelo");
-    localStorage.setItem("lang", lang);
+    document.body.classList.add('lang-switching');
+    setTimeout(() => {
+      currentLang = lang;
+      document.querySelectorAll("[data-en]").forEach(el => {
+        el.innerHTML = el.getAttribute("data-" + lang) || el.getAttribute("data-en");
+      });
+      document.getElementById("btn-en").classList.toggle("toggle-active",    lang === "en");
+      document.getElementById("btn-pidgin").classList.toggle("toggle-active", lang === "pidgin");
+      document.getElementById("btn-olelo").classList.toggle("toggle-active",  lang === "olelo");
+      localStorage.setItem("lang", lang);
+      document.body.classList.remove('lang-switching');
+    }, 180);
   }
 
   function toggleTheme() {
@@ -1502,22 +1502,48 @@
     const lu = document.getElementById('last-updated');
     if (lu) lu.textContent = 'Updated ' + new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
-    // ── Language crossfade ───────────────────────────────────────────────
-    const _origSetLang = setLang;
-    function setLang(lang) {
-      document.body.classList.add('lang-switching');
-      setTimeout(() => {
-        _origSetLang(lang);
-        document.body.classList.remove('lang-switching');
-      }, 180);
-    }
-
     // ── Keyboard shortcuts ───────────────────────────────────────────────
     document.addEventListener('keydown', (e) => {
       if (document.activeElement.tagName === 'INPUT') return;
       if (e.key === 't' || e.key === 'T') window.scrollTo({ top: 0, behavior: 'smooth' });
       if (e.key === 'd' || e.key === 'D') toggleTheme();
     });
+
+    // ── Marquee weather ──────────────────────────────────────────────────
+    async function loadMarqueeWeather() {
+      try {
+        const now = new Date();
+        const monthStart = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
+        const today     = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+        const res = await fetch(
+          'https://api.open-meteo.com/v1/forecast?latitude=20.8947&longitude=-156.4558' +
+          '&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m' +
+          '&daily=precipitation_sum&temperature_unit=fahrenheit&wind_speed_unit=mph' +
+          '&precipitation_unit=inch&timezone=Pacific%2FHonolulu&past_days=31&forecast_days=1'
+        );
+        const d = await res.json();
+        const c = d.current;
+        const descs = {0:'Clear',1:'Mostly Clear',2:'Partly Cloudy',3:'Overcast',
+          45:'Foggy',48:'Foggy',51:'Light Drizzle',53:'Drizzle',55:'Heavy Drizzle',
+          61:'Light Rain',63:'Rain',65:'Heavy Rain',80:'Showers',81:'Rain Showers',
+          82:'Heavy Showers',95:'Thunderstorm',96:'Thunderstorm',99:'Thunderstorm'};
+        let rain = 0;
+        if (d.daily?.time) {
+          d.daily.time.forEach((date, i) => {
+            if (date >= monthStart && date <= today) rain += (d.daily.precipitation_sum[i] || 0);
+          });
+        }
+        const monthName = now.toLocaleString('en-US', { month: 'long' });
+        const sep = ' &nbsp;·&nbsp; ';
+        const wx = `Wailuku${sep}${Math.round(c.temperature_2m)}°F${sep}${descs[c.weather_code] || '—'}${sep}Wind ${Math.round(c.wind_speed_10m)} mph${sep}${c.relative_humidity_2m}% humidity${sep}${monthName} rainfall: ${rain.toFixed(2)}"`;
+        const track = document.getElementById('marquee-track');
+        if (track) {
+          const base = `And Jus Lidat &nbsp;·&nbsp; in Maui County &nbsp;·&nbsp; `;
+          track.innerHTML = `<span>${base}</span><span>${wx} &nbsp;·&nbsp; </span><span>${base}</span><span>${wx} &nbsp;·&nbsp; </span><span>${base}</span><span>${wx} &nbsp;·&nbsp; </span>`;
+        }
+      } catch(e) {}
+    }
+    loadMarqueeWeather();
   </script>
 </body>
 </html>
