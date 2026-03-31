@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hawaii News Today</title>
+  <style>
+    /* ── Theme tokens ─────────────────────────────────── */
+    :root {
+      --accent: #7878f8;
+      --accent-dim: rgba(120, 120, 248, 0.12);
+      --accent-hover: #9090fa;
+    }
+
+    [data-theme="dark"] {
+      --bg:        #0d0d10;
+      --surface:   #16161c;
+      --surface-2: #1e1e26;
+      --border:    #2c2c38;
+      --text-1:    #ededf2;
+      --text-2:    #8888a0;
+      --text-3:    #55556a;
+      --header-bg: #111118;
+      --shadow:    0 2px 8px rgba(0,0,0,0.4);
+      --shadow-lg: 0 8px 28px rgba(0,0,0,0.55);
+      --chip-bg:   #1e1e26;
+    }
+
+    [data-theme="light"] {
+      --bg:        #f2f2f6;
+      --surface:   #ffffff;
+      --surface-2: #ebebf0;
+      --border:    #dcdce8;
+      --text-1:    #111118;
+      --text-2:    #6060780;
+      --text-3:    #9898b0;
+      --header-bg: #18181f;
+      --shadow:    0 2px 8px rgba(0,0,0,0.07);
+      --shadow-lg: 0 8px 28px rgba(0,0,0,0.12);
+      --chip-bg:   #ebebf0;
+    }
+
+    /* ── Reset ────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text-1);
+      min-height: 100vh;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    /* ── Header ───────────────────────────────────────── */
+    header {
+      background: var(--header-bg);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .logo-text h1 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.4px;
+      color: var(--text-1);
+    }
+
+    [data-theme="dark"] .logo-text h1 { color: #ededf2; }
+    [data-theme="light"] .logo-text h1 { color: #f0f0f4; }
+
+    .logo-text p {
+      font-size: 11px;
+      color: var(--text-2);
+      margin-top: 2px;
+    }
+
+    [data-theme="dark"] .logo-text p { color: rgba(237,237,242,0.45); }
+    [data-theme="light"] .logo-text p { color: rgba(240,240,244,0.6); }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .last-updated {
+      font-size: 11px;
+      color: var(--text-3);
+    }
+
+    [data-theme="dark"] .last-updated { color: rgba(237,237,242,0.35); }
+    [data-theme="light"] .last-updated { color: rgba(240,240,244,0.5); }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 13px;
+      border-radius: 7px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.07);
+      color: rgba(237,237,242,0.8);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn:hover { background: rgba(255,255,255,0.13); color: #ededf2; }
+
+    .theme-toggle {
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      justify-content: center;
+      font-size: 15px;
+    }
+
+    .refresh-btn.spinning .spin-icon {
+      display: inline-block;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Filter bar ───────────────────────────────────── */
+    .filter-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .filter-bar::-webkit-scrollbar { display: none; }
+
+    .filter-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 10px 24px;
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .filter-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      white-space: nowrap;
+      margin-right: 4px;
+    }
+
+    .filter-chip {
+      padding: 5px 13px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--chip-bg);
+      color: var(--text-2);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+
+    .filter-chip:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .filter-chip.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* ── Main ─────────────────────────────────────────── */
+    main {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 28px 24px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+
+    .article-count {
+      font-size: 12px;
+      color: var(--text-3);
+    }
+
+    /* ── Grid ─────────────────────────────────────────── */
+    .articles-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+    }
+
+    /* ── Card ─────────────────────────────────────────── */
+    .article-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+    }
+
+    .article-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+      border-color: var(--accent);
+    }
+
+    .card-image-wrap {
+      position: relative;
+      width: 100%;
+      height: 175px;
+      overflow: hidden;
+      background: var(--surface-2);
+    }
+
+    .card-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: opacity 0.3s;
+    }
+
+    .card-image.loading { opacity: 0; }
+    .card-image.loaded  { opacity: 1; }
+
+    .card-image-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      color: var(--text-3);
+      font-size: 12px;
+    }
+
+    .card-image-placeholder svg {
+      opacity: 0.25;
+    }
+
+    .card-body {
+      padding: 14px 16px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .card-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .source-badge {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 3px 7px;
+      border-radius: 4px;
+      background: var(--accent-dim);
+      color: var(--accent);
+    }
+
+    .card-date {
+      font-size: 11px;
+      color: var(--text-3);
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.45;
+      color: var(--text-1);
+    }
+
+    .card-title a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .card-title a:hover { color: var(--accent); }
+
+    .card-desc {
+      font-size: 12.5px;
+      color: var(--text-2);
+      line-height: 1.55;
+      flex: 1;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-footer {
+      padding: 10px 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .read-more {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      opacity: 0.85;
+      transition: opacity 0.15s;
+    }
+
+    .read-more:hover { opacity: 1; }
+
+    /* ── States ───────────────────────────────────────── */
+    .loading-state, .error-state, .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--text-3);
+    }
+
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 2.5px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    .loading-state p { font-size: 13px; }
+
+    .state-icon {
+      font-size: 36px;
+      margin-bottom: 12px;
+      opacity: 0.4;
+    }
+
+    .error-state h3, .empty-state h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-2);
+      margin-bottom: 6px;
+    }
+
+    .error-state p, .empty-state p { font-size: 13px; }
+
+    /* ── Footer ───────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-3);
+      text-align: center;
+      padding: 20px 24px;
+      margin-top: 48px;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 600px) {
+      .header-inner { padding: 12px 16px; }
+      main { padding: 18px 14px; }
+      .filter-inner { padding: 10px 14px; }
+      .articles-grid { grid-template-columns: 1fr; gap: 12px; }
+      .last-updated { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo-text">
+      <h1>Hawaii News Today</h1>
+      <p>Local news from across the Hawaiian Islands &mdash; no sports</p>
+    </div>
+    <div class="header-right">
+      <span class="last-updated" id="lastUpdated"></span>
+      <button class="btn refresh-btn" id="refreshBtn" onclick="loadAll()">
+        <span class="spin-icon">↻</span> Refresh
+      </button>
+      <button class="btn theme-toggle" id="themeToggle" title="Toggle theme" onclick="toggleTheme()">
+        <span id="themeIcon">☀</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="filter-bar">
+  <div class="filter-inner">
+    <span class="filter-label">Source</span>
+    <button class="filter-chip active" data-filter="all">All</button>
+    <button class="filter-chip" data-filter="Civil Beat">Civil Beat</button>
+    <button class="filter-chip" data-filter="Hawaii News Now">Hawaii News Now</button>
+    <button class="filter-chip" data-filter="Maui Now">Maui Now</button>
+    <button class="filter-chip" data-filter="Big Island Video News">Big Island Video News</button>
+    <button class="filter-chip" data-filter="KITV">KITV</button>
+  </div>
+</div>
+
+<main>
+  <div class="section-header">
+    <span class="section-title">Latest Stories</span>
+    <span class="article-count" id="articleCount"></span>
+  </div>
+  <div class="articles-grid" id="articlesGrid">
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading Hawaii news&hellip;</p>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <strong>Hawaii News Today</strong> &mdash; aggregating public RSS feeds from local Hawaii publishers.<br>
+  Content belongs to respective publishers. No sports. Just news.
+</footer>
+
+<script>
+  // ── Theme ──────────────────────────────────────────────
+  const savedTheme = localStorage.getItem('hn-theme') || 'dark';
+  applyTheme(savedTheme);
+
+  function applyTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    document.getElementById('themeIcon').textContent = t === 'dark' ? '☀' : '☾';
+    localStorage.setItem('hn-theme', t);
+  }
+
+  function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    applyTheme(current === 'dark' ? 'light' : 'dark');
+  }
+
+  // ── Sources ────────────────────────────────────────────
+  const SOURCES = [
+    { name: 'Civil Beat',            url: 'https://www.civilbeat.org/feed/' },
+    { name: 'Hawaii News Now',       url: 'https://www.hawaiinewsnow.com/rss/news/' },
+    { name: 'Maui Now',              url: 'https://mauinow.com/feed/' },
+    { name: 'Big Island Video News', url: 'https://www.bigislandvideonews.com/feed/' },
+    { name: 'KITV',                  url: 'https://www.kitv.com/news/rss' },
+  ];
+
+  const CORS_PROXY = 'https://api.allorigins.win/get?url=';
+
+  // ── Sports filter ──────────────────────────────────────
+  const SPORTS_TERMS = [
+    'nfl','nba','mlb','nhl','mls','ufc','pga',
+    'football','basketball','baseball','hockey','soccer',
+    'volleyball','tennis','golf','wrestling','boxing',
+    'score','scores','standings','playoff','playoffs',
+    'championship','tournament','athlete','athletes',
+    'quarterback','pitcher','batter','goalkeeper',
+    'draft','roster','warriors','rainbows',
+    'pro bowl','super bowl',' bowl game',
+  ];
+
+  function isSports(item) {
+    const text = `${item.title} ${item.description} ${item.categories.join(' ')}`.toLowerCase();
+    return SPORTS_TERMS.some(t => text.includes(t));
+  }
+
+  // ── Helpers ────────────────────────────────────────────
+  function cleanText(html) {
+    const d = document.createElement('div');
+    d.innerHTML = html || '';
+    return d.textContent || '';
+  }
+
+  function timeAgo(dateStr) {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return 'Just now';
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    const d = Math.floor(h / 24);
+    return `${d}d ago`;
+  }
+
+  function elText(parent, tag) {
+    return parent.querySelector(tag)?.textContent?.trim() || '';
+  }
+
+  function extractImageFromXml(item) {
+    // <enclosure url="..." type="image/..."/>
+    const enc = item.querySelector('enclosure');
+    if (enc) {
+      const t = enc.getAttribute('type') || '';
+      const u = enc.getAttribute('url');
+      if (u && t.startsWith('image')) return u;
+    }
+    // <media:content url="..." medium="image"/> or <content url="..."/>
+    for (const el of item.querySelectorAll('content')) {
+      const u = el.getAttribute('url');
+      const med = el.getAttribute('medium');
+      if (u && (!med || med === 'image')) return u;
+    }
+    // <media:thumbnail url="..."/> or <thumbnail url="..."/>
+    for (const el of item.querySelectorAll('thumbnail')) {
+      const u = el.getAttribute('url');
+      if (u) return u;
+    }
+    // img tag inside description HTML
+    const desc = elText(item, 'description');
+    const m = desc.match(/<img[^>]+src=["']([^"']+)["']/i);
+    if (m) return m[1];
+    return null;
+  }
+
+  function parseItem(xmlItem, source) {
+    const title = elText(xmlItem, 'title');
+    if (!title) return null;
+
+    // <link> in RSS is sometimes a text node after the tag, not a child
+    let link = elText(xmlItem, 'link');
+    if (!link) {
+      const linkEl = xmlItem.querySelector('link');
+      link = linkEl?.nextSibling?.textContent?.trim() || '';
+    }
+    if (!link) link = elText(xmlItem, 'guid');
+
+    const description = elText(xmlItem, 'description');
+    const pubDate     = elText(xmlItem, 'pubDate') || new Date().toISOString();
+    const categories  = [...xmlItem.querySelectorAll('category')].map(c => c.textContent);
+    const image       = extractImageFromXml(xmlItem);
+
+    return { title, link, description, pubDate, categories, image, sourceName: source.name };
+  }
+
+  // microlink.io OG-meta fallback (faster than full screenshot, same free tier)
+  function metaImageUrl(articleUrl) {
+    return `https://api.microlink.io?url=${encodeURIComponent(articleUrl)}&meta=true&embed=image.url`;
+  }
+
+  function imgError(el) {
+    const wrap = el.parentElement;
+    if (!wrap) return;
+    const ph = document.createElement('div');
+    ph.className = 'card-image-placeholder';
+    ph.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>';
+    wrap.replaceChildren(ph);
+  }
+
+  // ── Fetch ──────────────────────────────────────────────
+  let allArticles = [];
+  let activeFilter = 'all';
+
+  function decodeContents(raw) {
+    // allorigins returns a data URI: "data:mime; charset=UTF-8;base64,<data>"
+    const idx = raw.indexOf(';base64,');
+    if (idx !== -1) return atob(raw.slice(idx + 8));
+    return raw;
+  }
+
+  async function fetchSource(source) {
+    try {
+      const ctrl = new AbortController();
+      const tid  = setTimeout(() => ctrl.abort(), 10000); // 10s timeout
+      const res  = await fetch(`${CORS_PROXY}${encodeURIComponent(source.url)}`, { signal: ctrl.signal });
+      clearTimeout(tid);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (!data.contents) throw new Error('Empty proxy response');
+
+      const xml    = decodeContents(data.contents);
+      const parser = new DOMParser();
+      const doc    = parser.parseFromString(xml, 'text/xml');
+      const items  = [...doc.querySelectorAll('item')];
+
+      return items
+        .map(el => parseItem(el, source))
+        .filter(item => item && !isSports(item));
+    } catch (e) {
+      console.warn(`[${source.name}]`, e.message);
+      return [];
+    }
+  }
+
+  // ── Render ─────────────────────────────────────────────
+  function renderCard(article) {
+    const desc   = cleanText(article.description).slice(0, 200);
+    const date   = timeAgo(article.pubDate);
+    // RSS image first; fall back to microlink OG-image extraction
+    const imgSrc = article.image || metaImageUrl(article.link);
+
+    return `
+      <article class="article-card">
+        <div class="card-image-wrap">
+          <img
+            class="card-image loading"
+            src="${imgSrc}"
+            alt=""
+            loading="lazy"
+            onload="this.classList.remove('loading');this.classList.add('loaded')"
+            onerror="imgError(this)"
+          />
+        </div>
+        <div class="card-body">
+          <div class="card-meta">
+            <span class="source-badge">${article.sourceName}</span>
+            <span class="card-date">${date}</span>
+          </div>
+          <h2 class="card-title">
+            <a href="${article.link}" target="_blank" rel="noopener noreferrer">${article.title}</a>
+          </h2>
+          ${desc ? `<p class="card-desc">${desc}</p>` : ''}
+        </div>
+        <div class="card-footer">
+          <a class="read-more" href="${article.link}" target="_blank" rel="noopener noreferrer">Read story →</a>
+        </div>
+      </article>
+    `;
+  }
+
+  function renderArticles() {
+    const grid = document.getElementById('articlesGrid');
+    const count = document.getElementById('articleCount');
+
+    const filtered = activeFilter === 'all'
+      ? allArticles
+      : allArticles.filter(a => a.sourceName === activeFilter);
+
+    if (filtered.length === 0) {
+      grid.innerHTML = `<div class="empty-state"><div class="state-icon">◌</div><h3>No stories found</h3><p>Try a different filter or refresh.</p></div>`;
+      count.textContent = '';
+      return;
+    }
+
+    grid.innerHTML = filtered.map(renderCard).join('');
+    count.textContent = `${filtered.length} ${filtered.length === 1 ? 'story' : 'stories'}`;
+  }
+
+  async function loadAll() {
+    const btn  = document.getElementById('refreshBtn');
+    const grid = document.getElementById('articlesGrid');
+    const count = document.getElementById('articleCount');
+
+    btn.classList.add('spinning');
+    allArticles = [];
+    grid.innerHTML = `<div class="loading-state"><div class="spinner"></div><p>Loading Hawaii news&hellip;</p></div>`;
+    count.textContent = '';
+
+    let settled = 0;
+    const total = SOURCES.length;
+
+    // Render as each source resolves instead of waiting for all
+    const promises = SOURCES.map(source =>
+      fetchSource(source).then(articles => {
+        settled++;
+        allArticles = [...allArticles, ...articles];
+        allArticles.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+        if (allArticles.length > 0) renderArticles();
+        if (settled === total) {
+          btn.classList.remove('spinning');
+          document.getElementById('lastUpdated').textContent =
+            `Updated ${new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}`;
+          if (allArticles.length === 0) {
+            grid.innerHTML = `<div class="error-state"><div class="state-icon">◌</div><h3>Couldn't load news right now</h3><p>RSS feeds may be temporarily unavailable. Try refreshing.</p></div>`;
+          }
+        }
+      })
+    );
+
+    await Promise.allSettled(promises);
+  }
+
+  // ── Filter chips ───────────────────────────────────────
+  document.querySelectorAll('.filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      activeFilter = chip.dataset.filter;
+      renderArticles();
+    });
+  });
+
+  loadAll();
+</script>
+</body>
+</html>
