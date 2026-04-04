@@ -415,7 +415,7 @@
       btn.disabled = true;
       btn.textContent = 'thinking...';
       try {
-        const res = await fetch('/.netlify/functions/generate-prompt', { method: 'POST' });
+        const res = await fetch('/api/generate-prompt', { method: 'POST' });
         if (!res.ok) throw new Error('api error');
         const { prompt } = await res.json();
         const photoSeed = 'ai-' + Date.now();
