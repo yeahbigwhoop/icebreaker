@@ -1,9 +1,10 @@
 const https = require('https');
 
 const QUERIES = [
-  'abstract', 'fog mist', 'water flow', 'light rays', 'smoke',
-  'ocean waves', 'forest', 'rain', 'clouds', 'nature texture',
-  'desert sand', 'city night', 'fire', 'snow', 'underwater',
+  'slow motion water', 'slow motion smoke', 'slow motion rain',
+  'slow motion fire', 'slow motion nature', 'slow motion light',
+  'slow motion people', 'slow motion crowd', 'slow motion hands',
+  'slow motion city', 'slow motion ocean', 'slow motion fog',
 ];
 
 function fetchPexels(apiKey, query, page) {
