@@ -67,14 +67,14 @@
     /* Floating circle button — positioned entirely by JS */
     .float-btn {
       position: fixed;
-      width: 116px;
-      height: 116px;
+      width: 174px;
+      height: 174px;
       border-radius: 50%;
       border: 1px solid rgba(255,255,255,0.45);
       background: none;
       color: rgba(255,255,255,0.6);
       font-family: 'Josefin Sans', sans-serif;
-      font-size: 13px;
+      font-size: 20px;
       font-weight: 100;
       letter-spacing: 0.05em;
       text-transform: lowercase;
@@ -82,7 +82,7 @@
       mix-blend-mode: difference;
       transition: color 0.3s, border-color 0.3s;
       line-height: 1.7;
-      padding: 0 12px;
+      padding: 0 18px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -418,21 +418,20 @@
     }
 
     // ── Physics ───────────────────────────────────────────────────────────────
-    const BTN_R = 58;
+    const BTN_R = 87;
     const GRAVITY = 0.18;
-    const BOUNCE_DAMP = 0.62;   // energy kept on wall bounce
-    const FLOOR_SETTLE = 0.8;   // extra horizontal friction when on floor
+    const BOUNCE_DAMP = 0.62;
+    const FLOOR_SETTLE = 0.8;
 
     let pBtn = null, pTxt = null, physRaf = null;
 
-    // Slingshot state
+    // Flick state
     let dragging = false;
-    let dragAnchor = null;       // where button was when grab started
     let lastDragX = 0, lastDragY = 0;
+    let velHistory = [];   // {x, y, t}[] for velocity sampling
 
     function physicsInit() {
       const W = window.innerWidth, H = window.innerHeight;
-      // Button starts near bottom center, at rest — gravity will keep it there until launched
       pBtn = {
         x: W * 0.5,
         y: H - BTN_R - 10,
@@ -523,42 +522,46 @@
       physRaf = requestAnimationFrame(physicsLoop);
     }
 
-    // ── Slingshot ─────────────────────────────────────────────────────────────
+    // ── Flick / power-arc ────────────────────────────────────────────────────
+    function flickSpeed() {
+      if (velHistory.length < 2) return 0;
+      const win = velHistory.filter(v => Date.now() - v.t < 80);
+      if (win.length < 2) return 0;
+      const f = win[0], l = win[win.length - 1];
+      const dt = (l.t - f.t) / 16;
+      if (dt <= 0) return 0;
+      const dx = l.x - f.x, dy = l.y - f.y;
+      return Math.sqrt(dx*dx + dy*dy) / dt;
+    }
+
     function drawSling() {
       const cvs = document.getElementById('slingshotCanvas');
       const ctx = cvs.getContext('2d');
       cvs.width = window.innerWidth;
       cvs.height = window.innerHeight;
       ctx.clearRect(0, 0, cvs.width, cvs.height);
+      if (!dragging) return;
 
-      if (!dragging || !dragAnchor) return;
-      const dx = pBtn.x - dragAnchor.x, dy = pBtn.y - dragAnchor.y;
-      const stretch = Math.sqrt(dx*dx + dy*dy);
-      if (stretch < 4) return;
+      const spd = flickSpeed();
+      const MAX = 18;
+      const power = Math.min(1, spd / MAX);
+      if (power < 0.05) return;
 
+      // Power arc grows clockwise around button as speed increases
       ctx.save();
-      ctx.setLineDash([4, 6]);
-      ctx.strokeStyle = `rgba(255,255,255,${Math.min(0.5, stretch / 200)})`;
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = `rgba(255,255,255,${0.25 + power * 0.45})`;
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(dragAnchor.x, dragAnchor.y);
-      ctx.lineTo(pBtn.x, pBtn.y);
+      ctx.arc(pBtn.x, pBtn.y, BTN_R + 10 + power * 16,
+              -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * power);
       ctx.stroke();
-      // Small dot at anchor
-      ctx.setLineDash([]);
-      ctx.fillStyle = `rgba(255,255,255,${Math.min(0.4, stretch / 250)})`;
-      ctx.beginPath();
-      ctx.arc(dragAnchor.x, dragAnchor.y, 3, 0, Math.PI * 2);
-      ctx.fill();
       ctx.restore();
     }
 
-    // Drag events — mousedown/touchstart on button
     function onDragStart(cx, cy) {
-      if (busy) return;
       dragging = true;
-      dragAnchor = { x: pBtn.x, y: pBtn.y };
       lastDragX = cx; lastDragY = cy;
+      velHistory = [];
       pBtn.vx = 0; pBtn.vy = 0;
     }
     function onDragMove(cx, cy) {
@@ -566,21 +569,29 @@
       pBtn.x += cx - lastDragX;
       pBtn.y += cy - lastDragY;
       lastDragX = cx; lastDragY = cy;
+      velHistory.push({ x: cx, y: cy, t: Date.now() });
+      if (velHistory.length > 30) velHistory.shift();
     }
     function onDragEnd() {
       if (!dragging) return;
       dragging = false;
-      if (dragAnchor) {
-        const dx = pBtn.x - dragAnchor.x, dy = pBtn.y - dragAnchor.y;
-        const stretch = Math.sqrt(dx*dx + dy*dy);
-        // Only generate if pulled enough; otherwise just drop with gravity
-        if (stretch > 20) {
-          pBtn.vx = -dx * 0.18;
-          pBtn.vy = -dy * 0.18;
-          generate();
+
+      const win = velHistory.filter(v => Date.now() - v.t < 80);
+      if (win.length >= 2) {
+        const f = win[0], l = win[win.length - 1];
+        const dt = (l.t - f.t) / 16;
+        if (dt > 0) {
+          const rawVx = (l.x - f.x) / dt;
+          const rawVy = (l.y - f.y) / dt;
+          const spd = Math.sqrt(rawVx*rawVx + rawVy*rawVy);
+          const MAX = 22;
+          const scale = spd > MAX ? MAX / spd : 1;
+          pBtn.vx = rawVx * scale;
+          pBtn.vy = rawVy * scale;
+          if (spd > 2) generate();
         }
       }
-      dragAnchor = null;
+      velHistory = [];
     }
 
     const btnEl = document.getElementById('genBtn');
