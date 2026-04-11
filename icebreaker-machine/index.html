@@ -37,7 +37,7 @@
 
     .prompt-text {
       font-family: 'DM Sans', sans-serif;
-      font-size: 54px;
+      font-size: 43px;
       font-weight: 300;
       color: #fff;
       text-align: center;
@@ -67,22 +67,22 @@
     /* Floating circle button — positioned entirely by JS */
     .float-btn {
       position: fixed;
-      width: 174px;
-      height: 174px;
+      width: 148px;
+      height: 148px;
       border-radius: 50%;
       border: 1px solid rgba(255,255,255,0.45);
       background: none;
       color: rgba(255,255,255,0.6);
-      font-family: 'Josefin Sans', sans-serif;
-      font-size: 20px;
-      font-weight: 100;
-      letter-spacing: 0.05em;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 17px;
+      font-weight: 300;
+      letter-spacing: 0.01em;
       text-transform: lowercase;
       cursor: grab;
       mix-blend-mode: difference;
       transition: color 0.3s, border-color 0.3s;
       line-height: 1.7;
-      padding: 0 18px;
+      padding: 0 16px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -418,17 +418,18 @@
     }
 
     // ── Physics ───────────────────────────────────────────────────────────────
-    const BTN_R = 87;
+    const BTN_R = 74;
     const GRAVITY = 0.18;
     const BOUNCE_DAMP = 0.62;
     const FLOOR_SETTLE = 0.8;
 
-    let pBtn = null, pTxt = null, physRaf = null;
+    let pBtn = null, pTxt = null, pCup = null, physRaf = null;
 
     // Flick state
     let dragging = false;
     let lastDragX = 0, lastDragY = 0;
-    let velHistory = [];   // {x, y, t}[] for velocity sampling
+    let velHistory = [];
+    let scored = false;  // debounce cup detection
 
     function physicsInit() {
       const W = window.innerWidth, H = window.innerHeight;
@@ -446,6 +447,17 @@
         vx: Math.cos(a2) * spd, vy: Math.sin(a2) * spd,
         r: 120
       };
+      // Cup: upper portion of screen, never where the button starts
+      const cupW = BTN_R * 2.4;   // inner opening width
+      const cupH = BTN_R * 1.3;   // depth
+      const margin = 80;
+      pCup = {
+        x: margin + cupW/2 + Math.random() * (W - margin*2 - cupW),
+        y: H * (0.12 + Math.random() * 0.28),   // upper 12–40% of screen
+        w: cupW,
+        h: cupH
+      };
+      scored = false;
       if (physRaf) cancelAnimationFrame(physRaf);
       physicsLoop();
     }
@@ -506,6 +518,25 @@
         }
       }
 
+      // Cup collision — button must enter from above with downward velocity
+      if (!scored && !dragging && !busy && pCup) {
+        const inX = Math.abs(pBtn.x - pCup.x) < (pCup.w / 2 - BTN_R * 0.15);
+        const inY = pBtn.y > pCup.y && pBtn.y < pCup.y + pCup.h + BTN_R;
+        if (inX && inY && pBtn.vy > 1.5) {
+          scored = true;
+          pBtn.vx = 0; pBtn.vy = 0;
+          pBtn.x = pCup.x;
+          pBtn.y = pCup.y + BTN_R + 6;
+          generate();
+          // pop back out after a beat
+          setTimeout(() => {
+            scored = false;
+            pBtn.vy = -(8 + Math.random() * 4);
+            pBtn.vx = (Math.random() - 0.5) * 5;
+          }, 600);
+        }
+      }
+
       // Apply positions to DOM
       const btnEl = document.getElementById('genBtn');
       btnEl.style.left = (pBtn.x - pBtn.r) + 'px';
@@ -516,7 +547,7 @@
       inner.style.left = (pTxt.x - tw * 0.5) + 'px';
       inner.style.top  = (pTxt.y - th * 0.5) + 'px';
 
-      // Draw slingshot rubber band
+      // Draw power arc + cup
       drawSling();
 
       physRaf = requestAnimationFrame(physicsLoop);
@@ -540,14 +571,53 @@
       cvs.width = window.innerWidth;
       cvs.height = window.innerHeight;
       ctx.clearRect(0, 0, cvs.width, cvs.height);
-      if (!dragging) return;
 
+      // ── Draw cup ────────────────────────────────────────────────────────────
+      if (pCup && pBtn) {
+        const { x, y, w, h } = pCup;
+        // Proximity glow: button near cup = brighter
+        const dx = pBtn.x - x, dy = pBtn.y - y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        const nearGlow = Math.max(0, 1 - dist / (BTN_R * 5));
+        const alpha = 0.28 + nearGlow * 0.45;
+        const rimExtra = 14;  // small horizontal wings on the rim
+
+        ctx.save();
+        ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
+        ctx.lineWidth = scored ? 2 : 1.5;
+
+        // Left rim wing
+        ctx.beginPath();
+        ctx.moveTo(x - w/2 - rimExtra, y);
+        ctx.lineTo(x - w/2, y);
+        // Left wall down
+        ctx.lineTo(x - w/2, y + h);
+        // Curved bottom
+        ctx.quadraticCurveTo(x, y + h + h * 0.35, x + w/2, y + h);
+        // Right wall up
+        ctx.lineTo(x + w/2, y);
+        // Right rim wing
+        ctx.lineTo(x + w/2 + rimExtra, y);
+        ctx.stroke();
+
+        // Scored flash
+        if (scored) {
+          ctx.strokeStyle = `rgba(255,255,255,0.7)`;
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.arc(x, y + h * 0.6, w * 0.28, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      // ── Power arc while dragging ─────────────────────────────────────────────
+      if (!dragging) return;
       const spd = flickSpeed();
       const MAX = 18;
       const power = Math.min(1, spd / MAX);
       if (power < 0.05) return;
 
-      // Power arc grows clockwise around button as speed increases
       ctx.save();
       ctx.strokeStyle = `rgba(255,255,255,${0.25 + power * 0.45})`;
       ctx.lineWidth = 1.5;
@@ -588,7 +658,7 @@
           const scale = spd > MAX ? MAX / spd : 1;
           pBtn.vx = rawVx * scale;
           pBtn.vy = rawVy * scale;
-          if (spd > 2) generate();
+          // Generation now triggered only by cup landing, not flick release
         }
       }
       velHistory = [];
