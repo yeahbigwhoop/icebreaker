@@ -33,7 +33,7 @@
       content: '';
       position: absolute;
       inset: 0;
-      background: rgba(245, 241, 234, 0.6);
+      background: rgba(245, 241, 234, 0.75);
     }
 
     /* UI overlay */
@@ -400,7 +400,7 @@
       if (url) {
         bgVideo.src = url;
         bgVideo.load();
-        bgVideo.oncanplay = () => { bgVideo.playbackRate = 0.5; };
+        bgVideo.oncanplay = () => { bgVideo.playbackRate = 0.3; };
       }
 
       setTimeout(() => {
