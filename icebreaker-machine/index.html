@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>The Icebreaker Machine</title>
-  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=DM+Sans:wght@300;400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=DM+Sans:wght@300;400&family=Playfair+Display:ital,wght@0,400;1,400&family=Space+Mono:wght@400&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -73,12 +73,12 @@
     }
 
     .prompt-wrap {
+      position: relative;
       flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      max-width: 540px;
       width: 100%;
+    }
+    #promptInner {
+      position: absolute;
     }
 
     .prompt-text {
@@ -157,7 +157,7 @@
     <div></div>
 
     <div class="prompt-wrap" id="promptWrap">
-      <div>
+      <div id="promptInner">
         <div class="prompt-text" id="promptText" title="click to copy"></div>
         <div class="copied-hint" id="copiedHint">copied</div>
       </div>
@@ -376,25 +376,44 @@
 
     // ── Layouts ───────────────────────────────────────────────────────────────
     const LAYOUTS = [
-      { jc: 'center',     ai: 'center',     fs: '18px', ta: 'center', mw: '540px' },
-      { jc: 'center',     ai: 'center',     fs: '30px', ta: 'center', mw: '680px' },
-      { jc: 'flex-start', ai: 'flex-start', fs: '13px', ta: 'left',   mw: '300px' },
-      { jc: 'flex-end',   ai: 'flex-end',   fs: '21px', ta: 'right',  mw: '420px' },
-      { jc: 'center',     ai: 'flex-start', fs: '22px', ta: 'center', mw: '580px' },
-      { jc: 'center',     ai: 'flex-end',   fs: '14px', ta: 'center', mw: '360px' },
-      { jc: 'flex-start', ai: 'center',     fs: '11px', ta: 'left',   mw: '260px' },
-      { jc: 'center',     ai: 'center',     fs: '38px', ta: 'center', mw: '760px' },
+      { top:'50%', left:'50%', tx:'-50%,-50%', fs:'18px', ta:'center', mw:'540px',  fw:'300' },
+      { top:'50%', left:'50%', tx:'-50%,-50%', fs:'52px', ta:'center', mw:'860px',  fw:'300' },
+      { top:'8%',  left:'6%',  tx:'0,0',       fs:'11px', ta:'left',   mw:'220px',  fw:'300' },
+      { top:'8%',  right:'6%', tx:'0,0',       fs:'11px', ta:'right',  mw:'220px',  fw:'300' },
+      { top:'50%', left:'50%', tx:'-50%,-50%', fs:'11px', ta:'center', mw:'300px',  fw:'400' },
+      { top:'8%',  left:'50%', tx:'-50%,0',    fs:'24px', ta:'center', mw:'600px',  fw:'300' },
+      { bottom:'8%',left:'6%', tx:'0,0',       fs:'36px', ta:'left',   mw:'640px',  fw:'300' },
+      { bottom:'8%',right:'6%',tx:'0,0',       fs:'14px', ta:'right',  mw:'280px',  fw:'300' },
+      { top:'50%', left:'6%',  tx:'0,-50%',    fs:'20px', ta:'left',   mw:'380px',  fw:'300' },
+      { top:'50%', right:'6%', tx:'0,-50%',    fs:'13px', ta:'right',  mw:'220px',  fw:'300' },
+      { bottom:'8%',left:'50%',tx:'-50%,0',    fs:'44px', ta:'center', mw:'760px',  fw:'300' },
+      { top:'8%',  left:'6%',  tx:'0,0',       fs:'42px', ta:'left',   mw:'700px',  fw:'300' },
+    ];
+
+    const FONTS = [
+      { family: "'DM Sans', sans-serif",           style: 'normal' },
+      { family: "'Special Elite', monospace",      style: 'normal' },
+      { family: "'Playfair Display', serif",       style: 'normal' },
+      { family: "'Playfair Display', serif",       style: 'italic' },
+      { family: "'Space Mono', monospace",         style: 'normal' },
     ];
 
     function applyLayout() {
       const L = LAYOUTS[Math.floor(Math.random() * LAYOUTS.length)];
-      const wrap = document.getElementById('promptWrap');
-      const text = document.getElementById('promptText');
-      wrap.style.justifyContent = L.jc;
-      wrap.style.alignItems = L.ai;
-      text.style.fontSize = L.fs;
-      text.style.textAlign = L.ta;
-      text.style.maxWidth = L.mw;
+      const F = FONTS[Math.floor(Math.random() * FONTS.length)];
+      const inner = document.getElementById('promptInner');
+      const text  = document.getElementById('promptText');
+      inner.style.top    = L.top    || '';
+      inner.style.bottom = L.bottom || '';
+      inner.style.left   = L.left   || '';
+      inner.style.right  = L.right  || '';
+      inner.style.transform = `translate(${L.tx})`;
+      text.style.fontSize   = L.fs;
+      text.style.textAlign  = L.ta;
+      text.style.maxWidth   = L.mw;
+      text.style.fontWeight = L.fw;
+      text.style.fontFamily = F.family;
+      text.style.fontStyle  = F.style;
     }
 
     // ── Drift ─────────────────────────────────────────────────────────────────
@@ -435,7 +454,7 @@
       textEl.style.transition = 'none';
       textEl.style.opacity = '1';
 
-      const delays = [50, 50, 55, 60, 70, 85, 105, 130, 165];
+      const delays = [100, 100, 110, 120, 140, 170, 210, 260, 330];
       for (const ms of delays) {
         textEl.textContent = prompts[Math.floor(Math.random() * prompts.length)];
         await new Promise(r => setTimeout(r, ms));
