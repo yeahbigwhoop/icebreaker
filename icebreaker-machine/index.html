@@ -74,22 +74,33 @@
       background: none;
       color: rgba(255,255,255,0.6);
       font-family: 'Josefin Sans', sans-serif;
-      font-size: 9px;
+      font-size: 13px;
       font-weight: 100;
-      letter-spacing: 0.12em;
+      letter-spacing: 0.05em;
       text-transform: lowercase;
-      cursor: pointer;
+      cursor: grab;
       mix-blend-mode: difference;
       transition: color 0.3s, border-color 0.3s;
-      line-height: 1.6;
-      padding: 0 10px;
+      line-height: 1.7;
+      padding: 0 12px;
       display: flex;
       align-items: center;
       justify-content: center;
       text-align: center;
+      user-select: none;
     }
+    .float-btn:active { cursor: grabbing; }
     .float-btn:hover { color: #fff; border-color: rgba(255,255,255,0.8); }
-    .float-btn:disabled { opacity: 0.4; cursor: default; }
+    .float-btn:disabled { cursor: grab; }
+
+    /* Slingshot rubber band canvas */
+    #slingshotCanvas {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      mix-blend-mode: difference;
+      z-index: 10;
+    }
   </style>
 </head>
 <body>
@@ -103,7 +114,8 @@
     <div class="copied-hint" id="copiedHint">copied</div>
   </div>
 
-  <button class="float-btn" id="genBtn" onclick="generate()">question<br>please</button>
+  <button class="float-btn" id="genBtn">question<br>please</button>
+  <canvas id="slingshotCanvas"></canvas>
 
   <script>
     // ── Prompts ──────────────────────────────────────────────────────────────
@@ -407,24 +419,33 @@
 
     // ── Physics ───────────────────────────────────────────────────────────────
     const BTN_R = 58;
+    const GRAVITY = 0.18;
+    const BOUNCE_DAMP = 0.62;   // energy kept on wall bounce
+    const FLOOR_SETTLE = 0.8;   // extra horizontal friction when on floor
+
     let pBtn = null, pTxt = null, physRaf = null;
+
+    // Slingshot state
+    let dragging = false;
+    let dragAnchor = null;       // where button was when grab started
+    let lastDragX = 0, lastDragY = 0;
 
     function physicsInit() {
       const W = window.innerWidth, H = window.innerHeight;
-      const speed = 1.8;
-      const a1 = Math.random() * Math.PI * 2;
-      const a2 = Math.random() * Math.PI * 2;
+      // Button starts near bottom center, at rest — gravity will keep it there until launched
       pBtn = {
-        x: W * (0.2 + Math.random() * 0.6),
-        y: H * (0.2 + Math.random() * 0.6),
-        vx: Math.cos(a1) * speed, vy: Math.sin(a1) * speed,
+        x: W * 0.5,
+        y: H - BTN_R - 10,
+        vx: 0, vy: 0,
         r: BTN_R
       };
+      const a2 = Math.random() * Math.PI * 2;
+      const spd = 1.6;
       pTxt = {
         x: W * (0.2 + Math.random() * 0.6),
-        y: H * (0.2 + Math.random() * 0.6),
-        vx: Math.cos(a2) * speed * 0.8, vy: Math.sin(a2) * speed * 0.8,
-        r: 120  // rough radius, updated after text renders
+        y: H * (0.2 + Math.random() * 0.5),
+        vx: Math.cos(a2) * spd, vy: Math.sin(a2) * spd,
+        r: 120
       };
       if (physRaf) cancelAnimationFrame(physRaf);
       physicsLoop();
@@ -441,16 +462,27 @@
       const W = window.innerWidth, H = window.innerHeight;
       if (!pBtn || !pTxt) { physRaf = requestAnimationFrame(physicsLoop); return; }
 
-      pBtn.x += pBtn.vx; pBtn.y += pBtn.vy;
+      if (!dragging) {
+        // Gravity on button
+        pBtn.vy += GRAVITY;
+        pBtn.x += pBtn.vx;
+        pBtn.y += pBtn.vy;
+
+        // Wall bounce — button (with damping)
+        if (pBtn.x - pBtn.r < 0)  { pBtn.x = pBtn.r;      pBtn.vx =  Math.abs(pBtn.vx) * BOUNCE_DAMP; }
+        if (pBtn.x + pBtn.r > W)  { pBtn.x = W - pBtn.r;  pBtn.vx = -Math.abs(pBtn.vx) * BOUNCE_DAMP; }
+        if (pBtn.y - pBtn.r < 0)  { pBtn.y = pBtn.r;      pBtn.vy =  Math.abs(pBtn.vy) * BOUNCE_DAMP; }
+        if (pBtn.y + pBtn.r > H)  {
+          pBtn.y = H - pBtn.r;
+          pBtn.vy = -Math.abs(pBtn.vy) * BOUNCE_DAMP;
+          pBtn.vx *= FLOOR_SETTLE;
+          if (Math.abs(pBtn.vy) < 1.2) pBtn.vy = 0;   // settle
+          if (Math.abs(pBtn.vx) < 0.3) pBtn.vx = 0;
+        }
+      }
+
+      // Text blob — no gravity, free float
       pTxt.x += pTxt.vx; pTxt.y += pTxt.vy;
-
-      // Wall bounce — button
-      if (pBtn.x - pBtn.r < 0)  { pBtn.x = pBtn.r;      pBtn.vx =  Math.abs(pBtn.vx); }
-      if (pBtn.x + pBtn.r > W)  { pBtn.x = W - pBtn.r;  pBtn.vx = -Math.abs(pBtn.vx); }
-      if (pBtn.y - pBtn.r < 0)  { pBtn.y = pBtn.r;      pBtn.vy =  Math.abs(pBtn.vy); }
-      if (pBtn.y + pBtn.r > H)  { pBtn.y = H - pBtn.r;  pBtn.vy = -Math.abs(pBtn.vy); }
-
-      // Wall bounce — text (only when visible)
       const txtEl = document.getElementById('promptText');
       if (txtEl.classList.contains('visible')) {
         if (pTxt.x - pTxt.r < 0)  { pTxt.x = pTxt.r;      pTxt.vx =  Math.abs(pTxt.vx); }
@@ -459,23 +491,23 @@
         if (pTxt.y + pTxt.r > H)  { pTxt.y = H - pTxt.r;  pTxt.vy = -Math.abs(pTxt.vy); }
       }
 
-      // Circle-circle collision
+      // Circle-circle collision (button vs text)
       const dx = pTxt.x - pBtn.x, dy = pTxt.y - pBtn.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
       const minD = pBtn.r + pTxt.r;
-      if (dist < minD && dist > 0.01) {
+      if (!dragging && dist < minD && dist > 0.01) {
         const nx = dx / dist, ny = dy / dist;
         const overlap = minD - dist;
         pBtn.x -= nx * overlap * 0.5;  pBtn.y -= ny * overlap * 0.5;
         pTxt.x += nx * overlap * 0.5;  pTxt.y += ny * overlap * 0.5;
         const dot = (pTxt.vx - pBtn.vx) * nx + (pTxt.vy - pBtn.vy) * ny;
         if (dot < 0) {
-          pBtn.vx += dot * nx; pBtn.vy += dot * ny;
-          pTxt.vx -= dot * nx; pTxt.vy -= dot * ny;
+          pBtn.vx += dot * nx * BOUNCE_DAMP; pBtn.vy += dot * ny * BOUNCE_DAMP;
+          pTxt.vx -= dot * nx;              pTxt.vy -= dot * ny;
         }
       }
 
-      // Apply to DOM
+      // Apply positions to DOM
       const btnEl = document.getElementById('genBtn');
       btnEl.style.left = (pBtn.x - pBtn.r) + 'px';
       btnEl.style.top  = (pBtn.y - pBtn.r) + 'px';
@@ -485,8 +517,79 @@
       inner.style.left = (pTxt.x - tw * 0.5) + 'px';
       inner.style.top  = (pTxt.y - th * 0.5) + 'px';
 
+      // Draw slingshot rubber band
+      drawSling();
+
       physRaf = requestAnimationFrame(physicsLoop);
     }
+
+    // ── Slingshot ─────────────────────────────────────────────────────────────
+    function drawSling() {
+      const cvs = document.getElementById('slingshotCanvas');
+      const ctx = cvs.getContext('2d');
+      cvs.width = window.innerWidth;
+      cvs.height = window.innerHeight;
+      ctx.clearRect(0, 0, cvs.width, cvs.height);
+
+      if (!dragging || !dragAnchor) return;
+      const dx = pBtn.x - dragAnchor.x, dy = pBtn.y - dragAnchor.y;
+      const stretch = Math.sqrt(dx*dx + dy*dy);
+      if (stretch < 4) return;
+
+      ctx.save();
+      ctx.setLineDash([4, 6]);
+      ctx.strokeStyle = `rgba(255,255,255,${Math.min(0.5, stretch / 200)})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(dragAnchor.x, dragAnchor.y);
+      ctx.lineTo(pBtn.x, pBtn.y);
+      ctx.stroke();
+      // Small dot at anchor
+      ctx.setLineDash([]);
+      ctx.fillStyle = `rgba(255,255,255,${Math.min(0.4, stretch / 250)})`;
+      ctx.beginPath();
+      ctx.arc(dragAnchor.x, dragAnchor.y, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Drag events — mousedown/touchstart on button
+    function onDragStart(cx, cy) {
+      if (busy) return;
+      dragging = true;
+      dragAnchor = { x: pBtn.x, y: pBtn.y };
+      lastDragX = cx; lastDragY = cy;
+      pBtn.vx = 0; pBtn.vy = 0;
+    }
+    function onDragMove(cx, cy) {
+      if (!dragging) return;
+      pBtn.x += cx - lastDragX;
+      pBtn.y += cy - lastDragY;
+      lastDragX = cx; lastDragY = cy;
+    }
+    function onDragEnd() {
+      if (!dragging) return;
+      dragging = false;
+      if (dragAnchor) {
+        const dx = pBtn.x - dragAnchor.x, dy = pBtn.y - dragAnchor.y;
+        const stretch = Math.sqrt(dx*dx + dy*dy);
+        // Only generate if pulled enough; otherwise just drop with gravity
+        if (stretch > 20) {
+          pBtn.vx = -dx * 0.18;
+          pBtn.vy = -dy * 0.18;
+          generate();
+        }
+      }
+      dragAnchor = null;
+    }
+
+    const btnEl = document.getElementById('genBtn');
+    btnEl.addEventListener('mousedown',  e => { e.preventDefault(); onDragStart(e.clientX, e.clientY); });
+    document.addEventListener('mousemove', e => onDragMove(e.clientX, e.clientY));
+    document.addEventListener('mouseup',   () => onDragEnd());
+    btnEl.addEventListener('touchstart',  e => { e.preventDefault(); const t = e.touches[0]; onDragStart(t.clientX, t.clientY); }, { passive: false });
+    document.addEventListener('touchmove', e => { if (dragging) { e.preventDefault(); const t = e.touches[0]; onDragMove(t.clientX, t.clientY); } }, { passive: false });
+    document.addEventListener('touchend',  () => onDragEnd());
 
     // ── Thinking words ────────────────────────────────────────────────────────
     const THINKING = [
@@ -577,11 +680,6 @@
         stopThinking();
       }
     }
-
-    // Click anywhere except button and prompt text also triggers
-    document.addEventListener('click', e => {
-      if (!e.target.closest('#genBtn') && !e.target.closest('#promptText')) generate();
-    });
 
     // Copy to clipboard on prompt click
     document.getElementById('promptText').addEventListener('click', e => {
