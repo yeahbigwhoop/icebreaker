@@ -28,64 +28,25 @@
       display: block;
     }
 
-    /* UI overlay */
-    .ui {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: space-between;
-      padding: 40px 48px 44px;
-      pointer-events: none;
-      mix-blend-mode: difference;
-    }
-
-    .title-wrap {
-      width: 100%;
-      overflow: hidden;
-    }
-    .title-track {
-      display: flex;
-      white-space: nowrap;
-      animation: marquee 35s linear infinite;
-    }
-    .title-track span {
-      font-family: 'Special Elite', monospace;
-      font-size: 10px;
-      color: rgba(255,255,255,0.55);
-      letter-spacing: 0.32em;
-      text-transform: lowercase;
-      font-weight: normal;
-      padding-right: 7em;
-    }
-    @keyframes marquee {
-      from { transform: translateX(0); }
-      to   { transform: translateX(-50%); }
-    }
-
-    .prompt-wrap {
-      position: relative;
-      flex: 1;
-      width: 100%;
-    }
+    /* Floating prompt text */
     #promptInner {
-      position: absolute;
+      position: fixed;
+      mix-blend-mode: difference;
+      pointer-events: none;
     }
 
     .prompt-text {
       font-family: 'DM Sans', sans-serif;
-      font-size: 18px;
+      font-size: 54px;
       font-weight: 300;
       color: #fff;
       text-align: center;
-      line-height: 1.75;
-      letter-spacing: -0.01em;
+      line-height: 1.4;
+      letter-spacing: -0.02em;
       opacity: 0;
-      transition: opacity 1s ease 0.3s, transform 4s ease-in-out;
-      transform: translate(var(--dx, 0px), var(--dy, 0px));
-      cursor: pointer;
+      transition: opacity 1s ease 0.3s;
       pointer-events: all;
+      cursor: pointer;
     }
     .prompt-text.visible { opacity: 1; }
     .prompt-text:hover { opacity: 0.7; }
@@ -99,39 +60,36 @@
       opacity: 0;
       transition: opacity 0.4s ease;
       pointer-events: none;
+      text-align: center;
     }
     .copied-hint.show { opacity: 1; }
 
-    /* Floating circle button */
+    /* Floating circle button — positioned entirely by JS */
     .float-btn {
       position: fixed;
-      bottom: 44px;
-      left: 50%;
-      width: 72px;
-      height: 72px;
+      width: 116px;
+      height: 116px;
       border-radius: 50%;
       border: 1px solid rgba(255,255,255,0.45);
       background: none;
       color: rgba(255,255,255,0.6);
-      font-family: 'Special Elite', monospace;
-      font-size: 8px;
-      letter-spacing: 0.18em;
+      font-family: 'Josefin Sans', sans-serif;
+      font-size: 9px;
+      font-weight: 100;
+      letter-spacing: 0.12em;
       text-transform: lowercase;
       cursor: pointer;
-      pointer-events: all;
       mix-blend-mode: difference;
-      transform: translateX(-50%);
-      animation: floatbob 3.2s ease-in-out infinite;
       transition: color 0.3s, border-color 0.3s;
-      line-height: 1.4;
-      padding: 0 8px;
+      line-height: 1.6;
+      padding: 0 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
     }
     .float-btn:hover { color: #fff; border-color: rgba(255,255,255,0.8); }
     .float-btn:disabled { opacity: 0.4; cursor: default; }
-    @keyframes floatbob {
-      0%, 100% { transform: translateX(-50%) translateY(0px); }
-      50%       { transform: translateX(-50%) translateY(-12px); }
-    }
   </style>
 </head>
 <body>
@@ -140,19 +98,12 @@
     <video id="bgVideo" autoplay muted loop playsinline></video>
   </div>
 
-  <div class="ui">
-    <div></div>
-
-    <div class="prompt-wrap" id="promptWrap">
-      <div id="promptInner">
-        <div class="prompt-text" id="promptText" title="click to copy"></div>
-        <div class="copied-hint" id="copiedHint">copied</div>
-      </div>
-    </div>
-
+  <div id="promptInner">
+    <div class="prompt-text" id="promptText" title="click to copy"></div>
+    <div class="copied-hint" id="copiedHint">copied</div>
   </div>
 
-  <button class="float-btn" id="genBtn" onclick="generate()">generate icebreaker</button>
+  <button class="float-btn" id="genBtn" onclick="generate()">question<br>please</button>
 
   <script>
     // ── Prompts ──────────────────────────────────────────────────────────────
@@ -378,22 +329,6 @@
     }
 
 
-    // ── Layouts ───────────────────────────────────────────────────────────────
-    // fs removed — font size is fixed at 18px; mw is now randomized in applyLayout()
-    const LAYOUTS = [
-      { top:'50%', left:'50%', tx:'-50%,-50%', ta:'center' },
-      { top:'8%',  left:'6%',  tx:'0,0',       ta:'left'   },
-      { top:'8%',  right:'6%', tx:'0,0',       ta:'right'  },
-      { top:'50%', left:'50%', tx:'-50%,-50%', ta:'center' },
-      { top:'8%',  left:'50%', tx:'-50%,0',    ta:'center' },
-      { bottom:'8%',left:'6%', tx:'0,0',       ta:'left'   },
-      { bottom:'8%',right:'6%',tx:'0,0',       ta:'right'  },
-      { top:'50%', left:'6%',  tx:'0,-50%',    ta:'left'   },
-      { top:'50%', right:'6%', tx:'0,-50%',    ta:'right'  },
-      { bottom:'8%',left:'50%',tx:'-50%,0',    ta:'center' },
-      { top:'8%',  left:'6%',  tx:'0,0',       ta:'left'   },
-      { bottom:'8%',left:'50%',tx:'-50%,0',    ta:'center' },
-    ];
 
     const FONTS = [
       { family: "'Abril Fatface', serif",              style: 'normal',  fw: '400' },
@@ -457,36 +392,122 @@
       { family: "'Yeseva One', serif",                 style: 'normal',  fw: '400' },
     ];
 
-    function applyLayout() {
-      const L = LAYOUTS[Math.floor(Math.random() * LAYOUTS.length)];
+    // ── Font / layout style ───────────────────────────────────────────────────
+    function applyStyle() {
       const F = FONTS[Math.floor(Math.random() * FONTS.length)];
-      // Random column width: narrow (160px) to wide (780px)
       const mw = `${160 + Math.floor(Math.random() * 621)}px`;
-      const inner = document.getElementById('promptInner');
-      const text  = document.getElementById('promptText');
-      inner.style.top    = L.top    || '';
-      inner.style.bottom = L.bottom || '';
-      inner.style.left   = L.left   || '';
-      inner.style.right  = L.right  || '';
-      inner.style.transform = `translate(${L.tx})`;
-      text.style.textAlign  = L.ta;
+      const ta = ['left','center','right'][Math.floor(Math.random()*3)];
+      const text = document.getElementById('promptText');
       text.style.maxWidth   = mw;
+      text.style.textAlign  = ta;
       text.style.fontWeight = F.fw;
       text.style.fontFamily = F.family;
       text.style.fontStyle  = F.style;
     }
 
-    // ── Drift ─────────────────────────────────────────────────────────────────
-    let driftTimer = null;
-    function startDrift() {
-      if (driftTimer) clearInterval(driftTimer);
-      const text = document.getElementById('promptText');
-      const step = () => {
-        text.style.setProperty('--dx', `${(Math.random()-0.5)*60}px`);
-        text.style.setProperty('--dy', `${(Math.random()-0.5)*60}px`);
+    // ── Physics ───────────────────────────────────────────────────────────────
+    const BTN_R = 58;
+    let pBtn = null, pTxt = null, physRaf = null;
+
+    function physicsInit() {
+      const W = window.innerWidth, H = window.innerHeight;
+      const speed = 1.8;
+      const a1 = Math.random() * Math.PI * 2;
+      const a2 = Math.random() * Math.PI * 2;
+      pBtn = {
+        x: W * (0.2 + Math.random() * 0.6),
+        y: H * (0.2 + Math.random() * 0.6),
+        vx: Math.cos(a1) * speed, vy: Math.sin(a1) * speed,
+        r: BTN_R
       };
-      step();
-      driftTimer = setInterval(() => step(), 2500 + Math.random()*2000);
+      pTxt = {
+        x: W * (0.2 + Math.random() * 0.6),
+        y: H * (0.2 + Math.random() * 0.6),
+        vx: Math.cos(a2) * speed * 0.8, vy: Math.sin(a2) * speed * 0.8,
+        r: 120  // rough radius, updated after text renders
+      };
+      if (physRaf) cancelAnimationFrame(physRaf);
+      physicsLoop();
+    }
+
+    function updateTxtRadius() {
+      const rect = document.getElementById('promptInner').getBoundingClientRect();
+      if (pTxt && rect.width > 10) {
+        pTxt.r = Math.sqrt(rect.width * rect.width + rect.height * rect.height) * 0.45;
+      }
+    }
+
+    function physicsLoop() {
+      const W = window.innerWidth, H = window.innerHeight;
+      if (!pBtn || !pTxt) { physRaf = requestAnimationFrame(physicsLoop); return; }
+
+      pBtn.x += pBtn.vx; pBtn.y += pBtn.vy;
+      pTxt.x += pTxt.vx; pTxt.y += pTxt.vy;
+
+      // Wall bounce — button
+      if (pBtn.x - pBtn.r < 0)  { pBtn.x = pBtn.r;      pBtn.vx =  Math.abs(pBtn.vx); }
+      if (pBtn.x + pBtn.r > W)  { pBtn.x = W - pBtn.r;  pBtn.vx = -Math.abs(pBtn.vx); }
+      if (pBtn.y - pBtn.r < 0)  { pBtn.y = pBtn.r;      pBtn.vy =  Math.abs(pBtn.vy); }
+      if (pBtn.y + pBtn.r > H)  { pBtn.y = H - pBtn.r;  pBtn.vy = -Math.abs(pBtn.vy); }
+
+      // Wall bounce — text (only when visible)
+      const txtEl = document.getElementById('promptText');
+      if (txtEl.classList.contains('visible')) {
+        if (pTxt.x - pTxt.r < 0)  { pTxt.x = pTxt.r;      pTxt.vx =  Math.abs(pTxt.vx); }
+        if (pTxt.x + pTxt.r > W)  { pTxt.x = W - pTxt.r;  pTxt.vx = -Math.abs(pTxt.vx); }
+        if (pTxt.y - pTxt.r < 0)  { pTxt.y = pTxt.r;      pTxt.vy =  Math.abs(pTxt.vy); }
+        if (pTxt.y + pTxt.r > H)  { pTxt.y = H - pTxt.r;  pTxt.vy = -Math.abs(pTxt.vy); }
+      }
+
+      // Circle-circle collision
+      const dx = pTxt.x - pBtn.x, dy = pTxt.y - pBtn.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const minD = pBtn.r + pTxt.r;
+      if (dist < minD && dist > 0.01) {
+        const nx = dx / dist, ny = dy / dist;
+        const overlap = minD - dist;
+        pBtn.x -= nx * overlap * 0.5;  pBtn.y -= ny * overlap * 0.5;
+        pTxt.x += nx * overlap * 0.5;  pTxt.y += ny * overlap * 0.5;
+        const dot = (pTxt.vx - pBtn.vx) * nx + (pTxt.vy - pBtn.vy) * ny;
+        if (dot < 0) {
+          pBtn.vx += dot * nx; pBtn.vy += dot * ny;
+          pTxt.vx -= dot * nx; pTxt.vy -= dot * ny;
+        }
+      }
+
+      // Apply to DOM
+      const btnEl = document.getElementById('genBtn');
+      btnEl.style.left = (pBtn.x - pBtn.r) + 'px';
+      btnEl.style.top  = (pBtn.y - pBtn.r) + 'px';
+
+      const inner = document.getElementById('promptInner');
+      const tw = txtEl.offsetWidth || 200, th = txtEl.offsetHeight || 60;
+      inner.style.left = (pTxt.x - tw * 0.5) + 'px';
+      inner.style.top  = (pTxt.y - th * 0.5) + 'px';
+
+      physRaf = requestAnimationFrame(physicsLoop);
+    }
+
+    // ── Thinking words ────────────────────────────────────────────────────────
+    const THINKING = [
+      'pondering', 'ruminating', 'cogitating', 'deliberating',
+      'pontificating', 'bamboozling', 'conjuring', 'philosophizing',
+      'conspiring', 'noodling', 'marinating', 'extrapolating',
+      'divining', 'channeling', 'intuiting', 'scheming',
+      'vibing', 'reckoning', 'calculating', 'theorizing'
+    ];
+    let thinkIdx = 0, thinkTimer = null;
+
+    function startThinking() {
+      thinkIdx = Math.floor(Math.random() * THINKING.length);
+      const btn = document.getElementById('genBtn');
+      const show = () => { btn.innerHTML = THINKING[thinkIdx++ % THINKING.length]; };
+      show();
+      thinkTimer = setInterval(show, 380);
+    }
+    function stopThinking() {
+      clearInterval(thinkTimer);
+      document.getElementById('genBtn').innerHTML = 'question<br>please';
     }
 
     // ── State ────────────────────────────────────────────────────────────────
@@ -512,10 +533,12 @@
       }
 
       textEl.textContent = finalText;
-      applyLayout();
-      startDrift();
+      applyStyle();
       textEl.style.transition = '';
       textEl.style.opacity = '';
+
+      // Update text physics radius after a frame
+      requestAnimationFrame(updateTxtRadius);
 
       const url = await videoPromise;
       if (url) {
@@ -539,24 +562,23 @@
       busy = true;
       const btn = document.getElementById('genBtn');
       btn.disabled = true;
-      btn.textContent = 'thinking...';
+      startThinking();
       try {
         const res = await fetch('/api/generate-prompt', { method: 'POST' });
         if (!res.ok) throw new Error();
         const { prompt } = await res.json();
         await showPrompt(prompt);
       } catch {
-        // fallback to local prompt
         const index = Math.floor(Math.random() * prompts.length);
         await showPrompt(prompts[index]);
       } finally {
         busy = false;
         btn.disabled = false;
-        btn.textContent = 'generate icebreaker';
+        stopThinking();
       }
     }
 
-    // Click anywhere (except the button itself) also triggers
+    // Click anywhere except button and prompt text also triggers
     document.addEventListener('click', e => {
       if (!e.target.closest('#genBtn') && !e.target.closest('#promptText')) generate();
     });
@@ -579,6 +601,12 @@
         e.preventDefault();
         generate();
       }
+    });
+
+    // Start physics loop immediately
+    physicsInit();
+    window.addEventListener('resize', () => {
+      // velocities stay, positions will self-correct on next wall bounce
     });
   </script>
 </body>
