@@ -90,7 +90,8 @@
       line-height: 1.75;
       letter-spacing: -0.01em;
       opacity: 0;
-      transition: opacity 1s ease 0.3s;
+      transition: opacity 1s ease 0.3s, transform 3.5s ease-in-out;
+      transform: translate(var(--dx, 0px), var(--dy, 0px));
       cursor: pointer;
       pointer-events: all;
     }
@@ -153,18 +154,9 @@
   </div>
 
   <div class="ui">
-    <div class="title-wrap">
-      <div class="title-track">
-        <span>the icebreaker machine</span>
-        <span>the icebreaker machine</span>
-        <span>the icebreaker machine</span>
-        <span>the icebreaker machine</span>
-        <span>the icebreaker machine</span>
-        <span>the icebreaker machine</span>
-      </div>
-    </div>
+    <div></div>
 
-    <div class="prompt-wrap">
+    <div class="prompt-wrap" id="promptWrap">
       <div>
         <div class="prompt-text" id="promptText" title="click to copy"></div>
         <div class="copied-hint" id="copiedHint">copied</div>
@@ -382,33 +374,92 @@
     }
 
 
+    // ── Layouts ───────────────────────────────────────────────────────────────
+    const LAYOUTS = [
+      { jc: 'center',     ai: 'center',     fs: '18px', ta: 'center', mw: '540px' },
+      { jc: 'center',     ai: 'center',     fs: '30px', ta: 'center', mw: '680px' },
+      { jc: 'flex-start', ai: 'flex-start', fs: '13px', ta: 'left',   mw: '300px' },
+      { jc: 'flex-end',   ai: 'flex-end',   fs: '21px', ta: 'right',  mw: '420px' },
+      { jc: 'center',     ai: 'flex-start', fs: '22px', ta: 'center', mw: '580px' },
+      { jc: 'center',     ai: 'flex-end',   fs: '14px', ta: 'center', mw: '360px' },
+      { jc: 'flex-start', ai: 'center',     fs: '11px', ta: 'left',   mw: '260px' },
+      { jc: 'center',     ai: 'center',     fs: '38px', ta: 'center', mw: '760px' },
+    ];
+
+    function applyLayout() {
+      const L = LAYOUTS[Math.floor(Math.random() * LAYOUTS.length)];
+      const wrap = document.getElementById('promptWrap');
+      const text = document.getElementById('promptText');
+      wrap.style.justifyContent = L.jc;
+      wrap.style.alignItems = L.ai;
+      text.style.fontSize = L.fs;
+      text.style.textAlign = L.ta;
+      text.style.maxWidth = L.mw;
+    }
+
+    // ── Drift ─────────────────────────────────────────────────────────────────
+    let driftTimer = null;
+    function startDrift() {
+      if (driftTimer) clearInterval(driftTimer);
+      const text = document.getElementById('promptText');
+      const step = () => {
+        text.style.setProperty('--dx', `${(Math.random()-0.5)*14}px`);
+        text.style.setProperty('--dy', `${(Math.random()-0.5)*14}px`);
+      };
+      step();
+      driftTimer = setInterval(() => step(), 3000 + Math.random()*2000);
+    }
+
     // ── State ────────────────────────────────────────────────────────────────
     let lastIndex = -1;
     let hintDismissed = false;
 
-    async function showPrompt(text) {
+    async function showPrompt(finalText) {
       if (!hintDismissed) {
         document.getElementById('kbdHint').classList.add('gone');
         hintDismissed = true;
       }
       const textEl = document.getElementById('promptText');
       const artWrap = document.getElementById('artWrap');
+
       artWrap.classList.remove('visible');
       textEl.classList.remove('visible');
 
-      const url = await loadVideo();
+      // Start loading video in parallel
+      const videoPromise = loadVideo();
+
+      // Wait for fade out
+      await new Promise(r => setTimeout(r, 350));
+
+      // Shuffle phase — bypass transition temporarily
+      textEl.style.transition = 'none';
+      textEl.style.opacity = '1';
+
+      const delays = [50, 50, 55, 60, 70, 85, 105, 130, 165];
+      for (const ms of delays) {
+        textEl.textContent = prompts[Math.floor(Math.random() * prompts.length)];
+        await new Promise(r => setTimeout(r, ms));
+      }
+
+      // Land on final
+      textEl.textContent = finalText;
+      applyLayout();
+      startDrift();
+
+      // Restore transitions
+      textEl.style.transition = '';
+      textEl.style.opacity = '';
+
+      // Fade in with video
+      const url = await videoPromise;
       if (url) {
         bgVideo.src = url;
         bgVideo.load();
         bgVideo.oncanplay = () => { bgVideo.playbackRate = 0.7; };
       }
-
-      setTimeout(() => {
-        textEl.textContent = text;
-        void artWrap.offsetHeight;
-        artWrap.classList.add('visible');
-        textEl.classList.add('visible');
-      }, 80);
+      void artWrap.offsetHeight;
+      artWrap.classList.add('visible');
+      textEl.classList.add('visible');
     }
 
     function generateIcebreaker() {
