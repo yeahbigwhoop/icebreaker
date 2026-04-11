@@ -14,7 +14,7 @@
       background: #f5f1ea;
     }
 
-    /* Full-bleed animation layer */
+    /* Full-bleed video layer */
     .art-wrap {
       position: fixed;
       inset: 0;
@@ -23,9 +23,17 @@
       background: #f5f1ea;
     }
     .art-wrap.visible { opacity: 1; }
-    #bgCanvas {
+    #bgVideo {
       width: 100%; height: 100%;
+      object-fit: cover;
       display: block;
+      filter: grayscale(100%);
+    }
+    .art-wrap::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(245, 241, 234, 0.6);
     }
 
     /* UI overlay */
@@ -141,7 +149,7 @@
 <body>
 
   <div class="art-wrap" id="artWrap">
-    <canvas id="bgCanvas"></canvas>
+    <video id="bgVideo" autoplay muted loop playsinline></video>
   </div>
 
   <div class="ui">
@@ -360,463 +368,25 @@
       "What's something you own that's older than you?",
     ];
 
-    // ── Canvas animation ──────────────────────────────────────────────────────
-    const canvas = document.getElementById('bgCanvas');
-    const ctx = canvas.getContext('2d');
-    let animId = null;
-    const SPEED = 0.5;
+    // ── Video background ──────────────────────────────────────────────────────
+    const bgVideo = document.getElementById('bgVideo');
 
-    function resizeCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    }
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
 
-    const BG = '#f5f1ea';
-    const INK = [42, 37, 32];
-
-    function mkRng(seed) {
-      let s = (Math.abs(seed) * 1234567 + 1) >>> 0;
-      return () => {
-        s = (s + 0x6D2B79F5) >>> 0;
-        let t = Math.imul(s ^ (s >>> 15), 1 | s);
-        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-        return ((t ^ (t >>> 14)) >>> 0) / 0x100000000;
-      };
+    async function loadVideo() {
+      try {
+        const res = await fetch('/api/random-video');
+        if (!res.ok) throw new Error();
+        const { url } = await res.json();
+        return url;
+      } catch { return null; }
     }
 
-    function offscreen(w, h) {
-      const c = document.createElement('canvas');
-      c.width = w; c.height = h;
-      return [c, c.getContext('2d')];
-    }
-
-    // 0 — Drifting particles
-    function animDrift(seed) {
-      const r = mkRng(seed);
-      const W = canvas.width, H = canvas.height;
-      const pts = Array.from({length: 140}, () => ({
-        x: r()*W, y: r()*H,
-        vx: (r()-0.5)*0.5*SPEED, vy: (r()-0.5)*0.5*SPEED,
-        sz: 0.8+r()*3.5, op: 0.04+r()*0.13,
-      }));
-      return () => {
-        ctx.fillStyle = BG; ctx.fillRect(0,0,W,H);
-        for (const p of pts) {
-          p.x = (p.x+p.vx+W)%W; p.y = (p.y+p.vy+H)%H;
-          ctx.beginPath(); ctx.arc(p.x,p.y,p.sz,0,Math.PI*2);
-          ctx.fillStyle = `rgba(${INK},${p.op})`; ctx.fill();
-        }
-      };
-    }
-
-    // 1 — Flow field
-    function animFlow(seed) {
-      const r = mkRng(seed);
-      const W = canvas.width, H = canvas.height;
-      const freq = 0.004+r()*0.005;
-      let phase = r()*Math.PI*2;
-      const spd = 0.004*SPEED;
-      const [tc, tctx] = offscreen(W, H);
-      tctx.fillStyle = BG; tctx.fillRect(0,0,W,H);
-      const pts = Array.from({length: 80}, () => ({
-        x: r()*W, y: r()*H, age: Math.floor(r()*180), life: 140+Math.floor(r()*160),
-      }));
-      return () => {
-        phase += spd;
-        tctx.fillStyle = 'rgba(245,241,234,0.018)'; tctx.fillRect(0,0,W,H);
-        for (const p of pts) {
-          const a = Math.sin(p.x*freq+phase)*Math.PI*2 + Math.cos(p.y*freq*0.8+phase*0.6)*Math.PI;
-          p.x += Math.cos(a)*1.3*SPEED; p.y += Math.sin(a)*1.3*SPEED; p.age++;
-          if (p.age>p.life||p.x<0||p.x>W||p.y<0||p.y>H) { p.x=r()*W; p.y=r()*H; p.age=0; }
-          const fade = Math.min(p.age/30,1)*Math.min((p.life-p.age)/30,1);
-          tctx.beginPath(); tctx.arc(p.x,p.y,0.9,0,Math.PI*2);
-          tctx.fillStyle = `rgba(${INK},${fade*0.22})`; tctx.fill();
-        }
-        ctx.drawImage(tc,0,0);
-      };
-    }
-
-    // 2 — Expanding rings
-    function animRings(seed) {
-      const r = mkRng(seed);
-      const W = canvas.width, H = canvas.height;
-      const cx = W*(0.25+r()*0.5), cy = H*(0.25+r()*0.5);
-      const rings = []; let ticker = 0;
-      const interval = 50+r()*50, spd = 0.5*SPEED;
-      const maxR = Math.sqrt(W*W+H*H);
-      return () => {
-        ctx.fillStyle = BG; ctx.fillRect(0,0,W,H);
-        if (++ticker>interval) { rings.push({r:0,op:0.15+r()*0.1}); ticker=0; }
-        for (let i=rings.length-1;i>=0;i--) {
-          rings[i].r += spd;
-          ctx.beginPath(); ctx.arc(cx,cy,rings[i].r,0,Math.PI*2);
-          ctx.strokeStyle = `rgba(${INK},${rings[i].op*(1-rings[i].r/maxR)})`;
-          ctx.lineWidth = 0.6; ctx.stroke();
-          if (rings[i].r>maxR) rings.splice(i,1);
-        }
-      };
-    }
-
-    // 3 — Sine waves
-    function animWaves(seed) {
-      const r = mkRng(seed);
-      const W = canvas.width, H = canvas.height;
-      const waves = Array.from({length:5+Math.floor(r()*4)}, () => ({
-        y: H*(0.08+r()*0.84), amp: 12+r()*70,
-        freq: 0.003+r()*0.009, phase: r()*Math.PI*2,
-        spd: (0.006+r()*0.009)*SPEED*(r()>0.5?1:-1),
-        op: 0.07+r()*0.11, lw: 0.4+r()*0.6,
-      }));
-      return () => {
-        ctx.fillStyle = BG; ctx.fillRect(0,0,W,H);
-        for (const w of waves) {
-          w.phase += w.spd;
-          ctx.beginPath();
-          ctx.moveTo(0, w.y+Math.sin(w.phase)*w.amp);
-          for (let x=2;x<=W;x+=2) {
-            ctx.lineTo(x, w.y+Math.sin(x*w.freq+w.phase)*w.amp+Math.sin(x*w.freq*2.1+w.phase*0.8)*w.amp*0.28);
-          }
-          ctx.strokeStyle = `rgba(${INK},${w.op})`; ctx.lineWidth = w.lw; ctx.stroke();
-        }
-      };
-    }
-
-    // 4 — Wandering paths
-    function animWander(seed) {
-      const r = mkRng(seed);
-      const W = canvas.width, H = canvas.height;
-      const [tc, tctx] = offscreen(W, H);
-      tctx.fillStyle = BG; tctx.fillRect(0,0,W,H);
-      const walkers = Array.from({length:3+Math.floor(r()*3)}, () => ({
-        x: W*(0.1+r()*0.8), y: H*(0.1+r()*0.8),
-        angle: r()*Math.PI*2, op: 0.08+r()*0.1, lw: 0.4+r()*0.7,
-      }));
-      return () => {
-        tctx.fillStyle = 'rgba(245,241,234,0.008)'; tctx.fillRect(0,0,W,H);
-        for (const w of walkers) {
-          w.angle += (Math.random()-0.5)*0.08*SPEED;
-          const nx=(w.x+Math.cos(w.angle)*1.5*SPEED+W)%W;
-          const ny=(w.y+Math.sin(w.angle)*1.5*SPEED+H)%H;
-          tctx.beginPath(); tctx.moveTo(w.x,w.y); tctx.lineTo(nx,ny);
-          tctx.strokeStyle = `rgba(${INK},${w.op})`; tctx.lineWidth = w.lw; tctx.stroke();
-          w.x=nx; w.y=ny;
-        }
-        ctx.drawImage(tc,0,0);
-      };
-    }
-
-    // 5 — Fog / soft blobs
-    function animFog(seed) {
-      const r = mkRng(seed);
-      const W = canvas.width, H = canvas.height;
-      const blobs = Array.from({length:18}, () => ({
-        x: r()*W, y: r()*H,
-        vx: (r()-0.5)*0.3*SPEED, vy: (r()-0.5)*0.3*SPEED,
-        sz: 90+r()*200, op: 0.018+r()*0.04,
-      }));
-      return () => {
-        ctx.fillStyle = BG; ctx.fillRect(0,0,W,H);
-        for (const b of blobs) {
-          b.x=(b.x+b.vx+W)%W; b.y=(b.y+b.vy+H)%H;
-          const g = ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,b.sz);
-          g.addColorStop(0,`rgba(${INK},${b.op})`);
-          g.addColorStop(1,'rgba(42,37,32,0)');
-          ctx.fillStyle = g;
-          ctx.fillRect(b.x-b.sz,b.y-b.sz,b.sz*2,b.sz*2);
-        }
-      };
-    }
-
-    // 6 — Breath
-    function animBreath(seed) {
-      const r = mkRng(seed);
-      const W = canvas.width, H = canvas.height;
-      const cx = W/2, cy = H/2;
-      let t = 0;
-      const baseR = Math.min(W,H)*(0.2+r()*0.15);
-      const breathAmp = baseR*(0.15+r()*0.2);
-      const breathSpd = (0.008+r()*0.005)*SPEED;
-      const segs = 80;
-      const dist = Array.from({length:6}, () => ({
-        amp: r()*0.12, freq: 2+Math.floor(r()*4),
-        phase: r()*Math.PI*2, spd: (r()-0.5)*0.008*SPEED,
-      }));
-      return () => {
-        t++;
-        ctx.fillStyle = BG; ctx.fillRect(0,0,W,H);
-        const breathR = baseR + Math.sin(t*breathSpd*Math.PI*2)*breathAmp;
-        for (const d of dist) d.phase += d.spd;
-        ctx.beginPath();
-        for (let i=0;i<=segs;i++) {
-          const a = (i/segs)*Math.PI*2;
-          let rad = breathR;
-          for (const d of dist) rad += Math.sin(a*d.freq+d.phase)*d.amp*breathR;
-          const x=cx+Math.cos(a)*rad, y=cy+Math.sin(a)*rad;
-          i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
-        }
-        ctx.closePath();
-        ctx.strokeStyle = `rgba(${INK},0.12)`; ctx.lineWidth = 0.8; ctx.stroke();
-        const g = ctx.createRadialGradient(cx,cy,0,cx,cy,breathR*1.2);
-        g.addColorStop(0,`rgba(${INK},0.04)`); g.addColorStop(1,'rgba(42,37,32,0)');
-        ctx.fillStyle = g; ctx.fill();
-      };
-    }
-
-    // 7 — Lissajous
-    function animLissajous(seed) {
-      const r = mkRng(seed);
-      const W = canvas.width, H = canvas.height;
-      const [tc, tctx] = offscreen(W, H);
-      tctx.fillStyle = BG; tctx.fillRect(0,0,W,H);
-      const a = 1+Math.floor(r()*4), b = 1+Math.floor(r()*4);
-      const rx = W*0.38, ry = H*0.38;
-      let delta = r()*Math.PI*2, phase = 0;
-      const deltaSpd = 0.002*SPEED, phaseSpd = 0.012*SPEED;
-      return () => {
-        delta += deltaSpd; phase += phaseSpd;
-        tctx.fillStyle = 'rgba(245,241,234,0.012)'; tctx.fillRect(0,0,W,H);
-        for (let i=0;i<300;i++) {
-          const t = (i/300)*Math.PI*2+phase;
-          const x=W/2+rx*Math.sin(a*t+delta), y=H/2+ry*Math.sin(b*t);
-          tctx.beginPath(); tctx.arc(x,y,0.8,0,Math.PI*2);
-          tctx.fillStyle = `rgba(${INK},0.18)`; tctx.fill();
-        }
-        ctx.drawImage(tc,0,0);
-      };
-    }
-
-    // 8 — Interference
-    function animInterference(seed) {
-      const r = mkRng(seed);
-      const W = canvas.width, H = canvas.height;
-      const sources = Array.from({length:2+Math.floor(r()*2)}, () => ({
-        x: W*(0.2+r()*0.6), y: H*(0.2+r()*0.6),
-        freq: 0.012+r()*0.018, phase: r()*Math.PI*2, spd: 0.015*SPEED,
-      }));
-      const oW=Math.floor(W/4), oH=Math.floor(H/4);
-      const [oc, octx] = offscreen(oW, oH);
-      const img = octx.createImageData(oW, oH);
-      let frame=0;
-      return () => {
-        for (const s of sources) s.phase += s.spd;
-        if (frame++%2===0) {
-          const sx=W/oW, sy=H/oH;
-          for (let y=0;y<oH;y++) for (let x=0;x<oW;x++) {
-            let v=0;
-            for (const s of sources) {
-              const dx=x*sx-s.x, dy=y*sy-s.y;
-              v += Math.sin(Math.sqrt(dx*dx+dy*dy)*s.freq+s.phase);
-            }
-            v=(v/sources.length+1)/2;
-            const idx=(y*oW+x)*4;
-            img.data[idx]=42; img.data[idx+1]=37; img.data[idx+2]=32;
-            img.data[idx+3]=Math.floor(v*v*55);
-          }
-          octx.putImageData(img,0,0);
-        }
-        ctx.fillStyle=BG; ctx.fillRect(0,0,W,H);
-        ctx.drawImage(oc,0,0,W,H);
-      };
-    }
-
-    // 9 — Voronoi
-    function animVoronoi(seed) {
-      const r = mkRng(seed);
-      const W = canvas.width, H = canvas.height;
-      const n = 12+Math.floor(r()*10);
-      const pts = Array.from({length:n}, () => ({
-        x: r()*W, y: r()*H,
-        vx: (r()-0.5)*0.4*SPEED, vy: (r()-0.5)*0.4*SPEED,
-      }));
-      const oW=Math.floor(W/3), oH=Math.floor(H/3);
-      const [oc, octx] = offscreen(oW, oH);
-      const img = octx.createImageData(oW, oH);
-      let frame=0;
-      return () => {
-        for (const p of pts) { p.x=(p.x+p.vx+W)%W; p.y=(p.y+p.vy+H)%H; }
-        if (frame++%2===0) {
-          const sx=W/oW, sy=H/oH;
-          for (let y=0;y<oH;y++) for (let x=0;x<oW;x++) {
-            let d1=Infinity, d2=Infinity;
-            const wx=x*sx, wy=y*sy;
-            for (const p of pts) {
-              const d=(wx-p.x)**2+(wy-p.y)**2;
-              if (d<d1){d2=d1;d1=d;} else if(d<d2) d2=d;
-            }
-            const edge=Math.sqrt(d2)-Math.sqrt(d1);
-            const idx=(y*oW+x)*4;
-            img.data[idx]=42; img.data[idx+1]=37; img.data[idx+2]=32;
-            img.data[idx+3]=edge<10?Math.floor((1-edge/10)*55):0;
-          }
-          octx.putImageData(img,0,0);
-        }
-        ctx.fillStyle=BG; ctx.fillRect(0,0,W,H);
-        ctx.drawImage(oc,0,0,W,H);
-      };
-    }
-
-    // 10 — Reaction-diffusion (Gray-Scott)
-    function animRD(seed) {
-      const r = mkRng(seed);
-      const W = canvas.width, H = canvas.height;
-      const RW=140, RH=Math.floor(140*H/W);
-      const presets=[[0.037,0.06],[0.035,0.065],[0.025,0.05],[0.055,0.062]];
-      const [f,k] = presets[Math.floor(r()*presets.length)];
-      let U=new Float32Array(RW*RH).fill(1), V=new Float32Array(RW*RH);
-      let nU=new Float32Array(RW*RH), nV=new Float32Array(RW*RH);
-      for (let i=0;i<8;i++) {
-        const cx=Math.floor(r()*RW), cy=Math.floor(r()*RH);
-        for (let dy=-3;dy<=3;dy++) for (let dx=-3;dx<=3;dx++) {
-          const idx=((cy+dy+RH)%RH)*RW+((cx+dx+RW)%RW);
-          V[idx]=0.5+(r()-0.5)*0.1; U[idx]=0.25;
-        }
-      }
-      const [oc, octx] = offscreen(RW, RH);
-      const img = octx.createImageData(RW, RH);
-      const steps = Math.ceil(8*SPEED);
-      return () => {
-        for (let s=0;s<steps;s++) {
-          for (let y=0;y<RH;y++) for (let x=0;x<RW;x++) {
-            const i=y*RW+x;
-            const u=U[i],v=V[i];
-            const lu=U[((y-1+RH)%RH)*RW+x]+U[((y+1)%RH)*RW+x]+U[y*RW+(x-1+RW)%RW]+U[y*RW+(x+1)%RW]-4*u;
-            const lv=V[((y-1+RH)%RH)*RW+x]+V[((y+1)%RH)*RW+x]+V[y*RW+(x-1+RW)%RW]+V[y*RW+(x+1)%RW]-4*v;
-            const uvv=u*v*v;
-            nU[i]=Math.max(0,Math.min(1,u+0.21*lu-uvv+f*(1-u)));
-            nV[i]=Math.max(0,Math.min(1,v+0.105*lv+uvv-(f+k)*v));
-          }
-          [U,nU]=[nU,U]; [V,nV]=[nV,V];
-        }
-        for (let i=0;i<RW*RH;i++) {
-          img.data[i*4]=42; img.data[i*4+1]=37; img.data[i*4+2]=32;
-          img.data[i*4+3]=Math.floor(V[i]*180);
-        }
-        octx.putImageData(img,0,0);
-        ctx.fillStyle=BG; ctx.fillRect(0,0,W,H);
-        ctx.drawImage(oc,0,0,W,H);
-      };
-    }
-
-    // 11 — Boids
-    function animBoids(seed) {
-      const r = mkRng(seed);
-      const W = canvas.width, H = canvas.height;
-      const N=80, SIGHT=80, SEP=25, MV=1.5*SPEED;
-      const boids = Array.from({length:N}, () => ({
-        x: r()*W, y: r()*H, vx: (r()-0.5)*1.5, vy: (r()-0.5)*1.5,
-      }));
-      const [tc, tctx] = offscreen(W, H);
-      tctx.fillStyle=BG; tctx.fillRect(0,0,W,H);
-      return () => {
-        tctx.fillStyle='rgba(245,241,234,0.025)'; tctx.fillRect(0,0,W,H);
-        for (const b of boids) {
-          let ax=0,ay=0,sx=0,sy=0,cx=0,cy=0,n=0,ns=0;
-          for (const o of boids) {
-            if (o===b) continue;
-            const dx=o.x-b.x, dy=o.y-b.y, d=Math.sqrt(dx*dx+dy*dy);
-            if (d<SEP){sx-=dx/(d||1);sy-=dy/(d||1);ns++;}
-            if (d<SIGHT){ax+=o.vx;ay+=o.vy;cx+=o.x;cy+=o.y;n++;}
-          }
-          let fx=0,fy=0;
-          if(ns>0){fx+=sx/ns*0.05;fy+=sy/ns*0.05;}
-          if(n>0){fx+=(ax/n-b.vx)*0.005;fy+=(ay/n-b.vy)*0.005;fx+=(cx/n-b.x)*0.0003;fy+=(cy/n-b.y)*0.0003;}
-          b.vx+=fx; b.vy+=fy;
-          const spd=Math.sqrt(b.vx*b.vx+b.vy*b.vy)||1;
-          if(spd>MV){b.vx=b.vx/spd*MV;b.vy=b.vy/spd*MV;}
-          b.x=(b.x+b.vx+W)%W; b.y=(b.y+b.vy+H)%H;
-          tctx.beginPath(); tctx.arc(b.x,b.y,1.2,0,Math.PI*2);
-          tctx.fillStyle=`rgba(${INK},0.25)`; tctx.fill();
-        }
-        ctx.drawImage(tc,0,0);
-      };
-    }
-
-    // 12 — Metaballs
-    function animMetaballs(seed) {
-      const r = mkRng(seed);
-      const W = canvas.width, H = canvas.height;
-      const balls = Array.from({length:5+Math.floor(r()*4)}, () => ({
-        x: r()*W, y: r()*H,
-        vx: (r()-0.5)*0.6*SPEED, vy: (r()-0.5)*0.6*SPEED,
-        rad: 80+r()*160,
-      }));
-      const oW=Math.floor(W/4), oH=Math.floor(H/4);
-      const [oc, octx] = offscreen(oW, oH);
-      const img = octx.createImageData(oW, oH);
-      let frame=0;
-      return () => {
-        for (const b of balls){b.x=(b.x+b.vx+W)%W;b.y=(b.y+b.vy+H)%H;}
-        if(frame++%2===0) {
-          const sx=W/oW, sy=H/oH;
-          for (let y=0;y<oH;y++) for (let x=0;x<oW;x++) {
-            let sum=0;
-            const wx=x*sx, wy=y*sy;
-            for (const b of balls){const dx=wx-b.x,dy=wy-b.y;sum+=b.rad*b.rad/(dx*dx+dy*dy+1);}
-            const v=Math.max(0,Math.min(1,(sum-0.8)/0.8));
-            const idx=(y*oW+x)*4;
-            img.data[idx]=42;img.data[idx+1]=37;img.data[idx+2]=32;img.data[idx+3]=Math.floor(v*70);
-          }
-          octx.putImageData(img,0,0);
-        }
-        ctx.fillStyle=BG; ctx.fillRect(0,0,W,H); ctx.drawImage(oc,0,0,W,H);
-      };
-    }
-
-    // 13 — Branching tree
-    function animBranching(seed) {
-      const r = mkRng(seed);
-      const W = canvas.width, H = canvas.height;
-      const [tc, tctx] = offscreen(W, H);
-      tctx.fillStyle=BG; tctx.fillRect(0,0,W,H);
-      let tips = [{
-        x: W*(0.3+r()*0.4), y: H*0.88,
-        angle: -Math.PI/2+(r()-0.5)*0.3, len: 40+r()*30, depth: 0,
-      }];
-      return () => {
-        tctx.fillStyle='rgba(245,241,234,0.003)'; tctx.fillRect(0,0,W,H);
-        const grow = Math.ceil(2*SPEED);
-        for (let g=0;g<grow;g++) {
-          if (!tips.length) {
-            tips=[{x:W*(0.3+Math.random()*0.4),y:H*0.88,angle:-Math.PI/2+(Math.random()-0.5)*0.3,len:40+Math.random()*30,depth:0}];
-            break;
-          }
-          const tip=tips.shift();
-          const nx=tip.x+Math.cos(tip.angle)*tip.len, ny=tip.y+Math.sin(tip.angle)*tip.len;
-          tctx.beginPath(); tctx.moveTo(tip.x,tip.y); tctx.lineTo(nx,ny);
-          tctx.strokeStyle=`rgba(${INK},${0.12-tip.depth*0.011})`;
-          tctx.lineWidth=Math.max(0.3,1.5-tip.depth*0.16); tctx.stroke();
-          if (tip.depth<9&&tip.len>6&&ny<H*0.92) {
-            const sp=0.3+r()*0.25;
-            tips.push({x:nx,y:ny,angle:tip.angle-sp+(Math.random()-0.5)*0.2,len:tip.len*0.72,depth:tip.depth+1});
-            if (r()>0.35) tips.push({x:nx,y:ny,angle:tip.angle+sp+(Math.random()-0.5)*0.2,len:tip.len*0.68,depth:tip.depth+1});
-          }
-        }
-        ctx.drawImage(tc,0,0);
-      };
-    }
-
-    const ANIMATIONS = [
-      animDrift, animFlow, animRings, animWaves, animWander,
-      animFog, animBreath, animLissajous, animInterference,
-      animVoronoi, animRD, animBoids, animMetaballs, animBranching,
-    ];
-
-    function startAnimation(seed) {
-      if (animId) { cancelAnimationFrame(animId); animId = null; }
-      resizeCanvas();
-      const type = Math.floor(Math.random() * ANIMATIONS.length);
-      const draw = ANIMATIONS[type](seed);
-      function loop() { draw(); animId = requestAnimationFrame(loop); }
-      animId = requestAnimationFrame(loop);
-    }
 
     // ── State ────────────────────────────────────────────────────────────────
     let lastIndex = -1;
     let hintDismissed = false;
 
-    function showPrompt(text, seed) {
+    async function showPrompt(text) {
       if (!hintDismissed) {
         document.getElementById('kbdHint').classList.add('gone');
         hintDismissed = true;
@@ -825,9 +395,14 @@
       const artWrap = document.getElementById('artWrap');
       artWrap.classList.remove('visible');
       textEl.classList.remove('visible');
-      const numSeed = typeof seed === 'number' ? seed
-        : [...String(seed)].reduce((a, c) => a + c.charCodeAt(0), 0);
-      startAnimation(numSeed);
+
+      const url = await loadVideo();
+      if (url) {
+        bgVideo.src = url;
+        bgVideo.load();
+        bgVideo.oncanplay = () => { bgVideo.playbackRate = 0.5; };
+      }
+
       setTimeout(() => {
         textEl.textContent = text;
         void artWrap.offsetHeight;
@@ -841,7 +416,7 @@
       do { index = Math.floor(Math.random() * prompts.length); }
       while (index === lastIndex && prompts.length > 1);
       lastIndex = index;
-      showPrompt(prompts[index], index);
+      showPrompt(prompts[index]);
     }
 
     async function generateAIPrompt() {
@@ -852,7 +427,7 @@
         const res = await fetch('/api/generate-prompt', { method: 'POST' });
         if (!res.ok) throw new Error('api error');
         const { prompt } = await res.json();
-        showPrompt(prompt, Date.now());
+        showPrompt(prompt);
       } catch (e) {
         generateIcebreaker();
       } finally {
