@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>The Icebreaker Machine</title>
-  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=DM+Sans:wght@300;400&family=Playfair+Display:ital,wght@0,400;1,400&family=Space+Mono:wght@400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=DM+Sans:wght@300;400&family=Playfair+Display:ital,wght@0,400;1,400&family=Space+Mono:wght@400&family=Abril+Fatface&family=Bebas+Neue&family=Caveat:wght@400;700&family=Cinzel:wght@400;700&family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Dancing+Script:wght@400;700&family=Darker+Grotesque:wght@300;400&family=EB+Garamond:ital,wght@0,400;1,400&family=Fjalla+One&family=Fraunces:ital,wght@0,100;1,100&family=Gloock:ital@0;1&family=IBM+Plex+Mono:ital,wght@0,300;1,300&family=IBM+Plex+Serif:ital,wght@0,300;1,300&family=Josefin+Sans:wght@100;300&family=Josefin+Slab:wght@100;300&family=Julius+Sans+One&family=Karla:wght@300;400&family=Lato:wght@100;300&family=Libre+Baskerville:ital@0;1&family=Lora:ital,wght@0,400;1,400&family=Merriweather:ital,wght@0,300;1,300&family=Montserrat:wght@100;300&family=Neuton:ital,wght@0,200;1,200&family=Nunito:wght@200;300&family=Old+Standard+TT:ital@0;1&family=Oswald:wght@200;300&family=Outfit:wght@100;200&family=PT+Serif:ital@0;1&family=Raleway:wght@100;300&family=Roboto+Condensed:wght@100;300&family=Roboto+Slab:wght@100;300&family=Rosarivo&family=Rufina&family=Sabon:ital@0;1&family=Syne:wght@400;700&family=Tenor+Sans&family=Tinos:ital@0;1&family=UnifrakturMaguntia&family=Urbanist:wght@100;200&family=Vidaloka&family=Vollkorn:ital,wght@0,400;1,400&family=Work+Sans:wght@100;200&family=Yeseva+One&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -14,26 +14,18 @@
       background: #f5f1ea;
     }
 
-    /* Full-bleed video layer */
+    /* Video frame — positioned and sized by JS each generation */
     .art-wrap {
       position: fixed;
-      inset: 0;
       opacity: 0;
+      overflow: hidden;
       transition: opacity 1.2s ease;
-      background: #f5f1ea;
     }
     .art-wrap.visible { opacity: 1; }
     #bgVideo {
       width: 100%; height: 100%;
       object-fit: cover;
       display: block;
-      filter: grayscale(100%);
-    }
-    .art-wrap::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: rgba(245, 241, 234, 0.75);
     }
 
     /* UI overlay */
@@ -363,6 +355,26 @@
     // ── Video background ──────────────────────────────────────────────────────
     const bgVideo = document.getElementById('bgVideo');
 
+    function randomVideoFrame() {
+      const w = 28 + Math.random() * 58;   // 28–86vw
+      const h = 22 + Math.random() * 62;   // 22–84vh
+      const maxLeft = 95 - w;
+      const left = -8 + Math.random() * (maxLeft + 12);
+      const maxTop = 95 - h;
+      const top  = -4 + Math.random() * (maxTop + 12);
+
+      const roll = Math.random();
+      let br;
+      if      (roll < 0.20) br = '0px';
+      else if (roll < 0.42) br = `${4 + Math.floor(Math.random() * 24)}px`;
+      else if (roll < 0.58) br = '50%';
+      else if (roll < 0.72) br = '999px';
+      else {
+        const r = () => `${Math.floor(Math.random() * 55)}%`;
+        br = `${r()} ${r()} ${r()} ${r()}`;
+      }
+      return { w: `${w}vw`, h: `${h}vh`, top: `${top}vh`, left: `${left}vw`, br };
+    }
 
     async function loadVideo() {
       try {
@@ -391,11 +403,65 @@
     ];
 
     const FONTS = [
-      { family: "'DM Sans', sans-serif",           style: 'normal' },
-      { family: "'Special Elite', monospace",      style: 'normal' },
-      { family: "'Playfair Display', serif",       style: 'normal' },
-      { family: "'Playfair Display', serif",       style: 'italic' },
-      { family: "'Space Mono', monospace",         style: 'normal' },
+      { family: "'Abril Fatface', serif",              style: 'normal',  fw: '400' },
+      { family: "'Bebas Neue', sans-serif",            style: 'normal',  fw: '400' },
+      { family: "'Caveat', cursive",                   style: 'normal',  fw: '400' },
+      { family: "'Caveat', cursive",                   style: 'normal',  fw: '700' },
+      { family: "'Cinzel', serif",                     style: 'normal',  fw: '400' },
+      { family: "'Cinzel', serif",                     style: 'normal',  fw: '700' },
+      { family: "'Cormorant Garamond', serif",         style: 'normal',  fw: '300' },
+      { family: "'Cormorant Garamond', serif",         style: 'italic',  fw: '300' },
+      { family: "'Dancing Script', cursive",           style: 'normal',  fw: '400' },
+      { family: "'Dancing Script', cursive",           style: 'normal',  fw: '700' },
+      { family: "'Darker Grotesque', sans-serif",      style: 'normal',  fw: '300' },
+      { family: "'DM Sans', sans-serif",               style: 'normal',  fw: '300' },
+      { family: "'EB Garamond', serif",                style: 'normal',  fw: '400' },
+      { family: "'EB Garamond', serif",                style: 'italic',  fw: '400' },
+      { family: "'Fjalla One', sans-serif",            style: 'normal',  fw: '400' },
+      { family: "'Fraunces', serif",                   style: 'normal',  fw: '100' },
+      { family: "'Fraunces', serif",                   style: 'italic',  fw: '100' },
+      { family: "'Gloock', serif",                     style: 'normal',  fw: '400' },
+      { family: "'Gloock', serif",                     style: 'italic',  fw: '400' },
+      { family: "'IBM Plex Mono', monospace",          style: 'normal',  fw: '300' },
+      { family: "'IBM Plex Mono', monospace",          style: 'italic',  fw: '300' },
+      { family: "'IBM Plex Serif', serif",             style: 'normal',  fw: '300' },
+      { family: "'IBM Plex Serif', serif",             style: 'italic',  fw: '300' },
+      { family: "'Josefin Sans', sans-serif",          style: 'normal',  fw: '100' },
+      { family: "'Josefin Slab', serif",               style: 'normal',  fw: '100' },
+      { family: "'Julius Sans One', sans-serif",       style: 'normal',  fw: '400' },
+      { family: "'Karla', sans-serif",                 style: 'normal',  fw: '300' },
+      { family: "'Lato', sans-serif",                  style: 'normal',  fw: '100' },
+      { family: "'Libre Baskerville', serif",          style: 'normal',  fw: '400' },
+      { family: "'Libre Baskerville', serif",          style: 'italic',  fw: '400' },
+      { family: "'Lora', serif",                       style: 'italic',  fw: '400' },
+      { family: "'Merriweather', serif",               style: 'normal',  fw: '300' },
+      { family: "'Merriweather', serif",               style: 'italic',  fw: '300' },
+      { family: "'Montserrat', sans-serif",            style: 'normal',  fw: '100' },
+      { family: "'Neuton', serif",                     style: 'italic',  fw: '200' },
+      { family: "'Nunito', sans-serif",                style: 'normal',  fw: '200' },
+      { family: "'Old Standard TT', serif",            style: 'normal',  fw: '400' },
+      { family: "'Old Standard TT', serif",            style: 'italic',  fw: '400' },
+      { family: "'Oswald', sans-serif",                style: 'normal',  fw: '200' },
+      { family: "'Outfit', sans-serif",                style: 'normal',  fw: '100' },
+      { family: "'PT Serif', serif",                   style: 'italic',  fw: '400' },
+      { family: "'Playfair Display', serif",           style: 'normal',  fw: '400' },
+      { family: "'Playfair Display', serif",           style: 'italic',  fw: '400' },
+      { family: "'Raleway', sans-serif",               style: 'normal',  fw: '100' },
+      { family: "'Roboto Condensed', sans-serif",      style: 'normal',  fw: '100' },
+      { family: "'Roboto Slab', serif",                style: 'normal',  fw: '100' },
+      { family: "'Rosarivo', serif",                   style: 'normal',  fw: '400' },
+      { family: "'Rufina', serif",                     style: 'normal',  fw: '400' },
+      { family: "'Space Mono', monospace",             style: 'normal',  fw: '400' },
+      { family: "'Special Elite', monospace",          style: 'normal',  fw: '400' },
+      { family: "'Syne', sans-serif",                  style: 'normal',  fw: '700' },
+      { family: "'Tenor Sans', sans-serif",            style: 'normal',  fw: '400' },
+      { family: "'Tinos', serif",                      style: 'italic',  fw: '400' },
+      { family: "'UnifrakturMaguntia', cursive",       style: 'normal',  fw: '400' },
+      { family: "'Urbanist', sans-serif",              style: 'normal',  fw: '100' },
+      { family: "'Vidaloka', serif",                   style: 'normal',  fw: '400' },
+      { family: "'Vollkorn', serif",                   style: 'italic',  fw: '400' },
+      { family: "'Work Sans', sans-serif",             style: 'normal',  fw: '100' },
+      { family: "'Yeseva One', serif",                 style: 'normal',  fw: '400' },
     ];
 
     function applyLayout() {
@@ -411,7 +477,7 @@
       text.style.fontSize   = L.fs;
       text.style.textAlign  = L.ta;
       text.style.maxWidth   = L.mw;
-      text.style.fontWeight = L.fw;
+      text.style.fontWeight = F.fw;
       text.style.fontFamily = F.family;
       text.style.fontStyle  = F.style;
     }
@@ -472,6 +538,12 @@
       // Fade in with video
       const url = await videoPromise;
       if (url) {
+        const frame = randomVideoFrame();
+        artWrap.style.width        = frame.w;
+        artWrap.style.height       = frame.h;
+        artWrap.style.top          = frame.top;
+        artWrap.style.left         = frame.left;
+        artWrap.style.borderRadius = frame.br;
         bgVideo.src = url;
         bgVideo.load();
         bgVideo.oncanplay = () => { bgVideo.playbackRate = 0.7; };
