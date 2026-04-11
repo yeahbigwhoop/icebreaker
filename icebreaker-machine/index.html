@@ -82,7 +82,7 @@
       line-height: 1.75;
       letter-spacing: -0.01em;
       opacity: 0;
-      transition: opacity 1s ease 0.3s, transform 3.5s ease-in-out;
+      transition: opacity 1s ease 0.3s, transform 4s ease-in-out;
       transform: translate(var(--dx, 0px), var(--dy, 0px));
       cursor: pointer;
       pointer-events: all;
@@ -91,7 +91,7 @@
     .prompt-text:hover { opacity: 0.7; }
 
     .copied-hint {
-      font-family: 'Inter', sans-serif;
+      font-family: 'Special Elite', monospace;
       font-size: 9px;
       color: rgba(255,255,255,0.6);
       letter-spacing: 0.14em;
@@ -102,41 +102,36 @@
     }
     .copied-hint.show { opacity: 1; }
 
-    .bottom-row {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      pointer-events: all;
-    }
-
-    .btn {
-      font-family: 'Special Elite', monospace;
-      font-size: 10px;
-      color: rgba(255,255,255,0.55);
+    /* Floating circle button */
+    .float-btn {
+      position: fixed;
+      bottom: 44px;
+      left: 50%;
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.45);
       background: none;
-      border: none;
-      border-bottom: 1px solid rgba(255,255,255,0.3);
-      padding: 4px 0;
-      letter-spacing: 0.2em;
-      cursor: pointer;
+      color: rgba(255,255,255,0.6);
+      font-family: 'Special Elite', monospace;
+      font-size: 8px;
+      letter-spacing: 0.18em;
       text-transform: lowercase;
+      cursor: pointer;
+      pointer-events: all;
+      mix-blend-mode: difference;
+      transform: translateX(-50%);
+      animation: floatbob 3.2s ease-in-out infinite;
       transition: color 0.3s, border-color 0.3s;
+      line-height: 1.4;
+      padding: 0 8px;
     }
-    .btn:hover { color: #fff; border-color: rgba(255,255,255,0.7); }
-    .btn-ai { border-bottom-style: dashed; }
-    .btn-ai:disabled { opacity: 0.5; cursor: default; }
-
-    .kbd-hint {
-      font-family: 'Inter', sans-serif;
-      font-size: 9px;
-      color: rgba(255,255,255,0.35);
-      letter-spacing: 0.14em;
-      font-weight: 300;
-      transition: opacity 1.5s ease;
-      user-select: none;
+    .float-btn:hover { color: #fff; border-color: rgba(255,255,255,0.8); }
+    .float-btn:disabled { opacity: 0.4; cursor: default; }
+    @keyframes floatbob {
+      0%, 100% { transform: translateX(-50%) translateY(0px); }
+      50%       { transform: translateX(-50%) translateY(-12px); }
     }
-    .kbd-hint.gone { opacity: 0; pointer-events: none; }
   </style>
 </head>
 <body>
@@ -155,12 +150,9 @@
       </div>
     </div>
 
-    <div class="bottom-row">
-      <button class="btn" onclick="generateIcebreaker()">generate icebreaker</button>
-      <button class="btn btn-ai" id="aiBtn" onclick="generateAIPrompt()">surprise me (ai)</button>
-      <span class="kbd-hint" id="kbdHint">or press space</span>
-    </div>
   </div>
+
+  <button class="float-btn" id="genBtn" onclick="generate()">generate icebreaker</button>
 
   <script>
     // ── Prompts ──────────────────────────────────────────────────────────────
@@ -387,19 +379,20 @@
 
 
     // ── Layouts ───────────────────────────────────────────────────────────────
+    // fs removed — font size is fixed at 18px; mw is now randomized in applyLayout()
     const LAYOUTS = [
-      { top:'50%', left:'50%', tx:'-50%,-50%', fs:'18px', ta:'center', mw:'540px',  fw:'300' },
-      { top:'50%', left:'50%', tx:'-50%,-50%', fs:'52px', ta:'center', mw:'860px',  fw:'300' },
-      { top:'8%',  left:'6%',  tx:'0,0',       fs:'11px', ta:'left',   mw:'220px',  fw:'300' },
-      { top:'8%',  right:'6%', tx:'0,0',       fs:'11px', ta:'right',  mw:'220px',  fw:'300' },
-      { top:'50%', left:'50%', tx:'-50%,-50%', fs:'11px', ta:'center', mw:'300px',  fw:'400' },
-      { top:'8%',  left:'50%', tx:'-50%,0',    fs:'24px', ta:'center', mw:'600px',  fw:'300' },
-      { bottom:'8%',left:'6%', tx:'0,0',       fs:'36px', ta:'left',   mw:'640px',  fw:'300' },
-      { bottom:'8%',right:'6%',tx:'0,0',       fs:'14px', ta:'right',  mw:'280px',  fw:'300' },
-      { top:'50%', left:'6%',  tx:'0,-50%',    fs:'20px', ta:'left',   mw:'380px',  fw:'300' },
-      { top:'50%', right:'6%', tx:'0,-50%',    fs:'13px', ta:'right',  mw:'220px',  fw:'300' },
-      { bottom:'8%',left:'50%',tx:'-50%,0',    fs:'44px', ta:'center', mw:'760px',  fw:'300' },
-      { top:'8%',  left:'6%',  tx:'0,0',       fs:'42px', ta:'left',   mw:'700px',  fw:'300' },
+      { top:'50%', left:'50%', tx:'-50%,-50%', ta:'center' },
+      { top:'8%',  left:'6%',  tx:'0,0',       ta:'left'   },
+      { top:'8%',  right:'6%', tx:'0,0',       ta:'right'  },
+      { top:'50%', left:'50%', tx:'-50%,-50%', ta:'center' },
+      { top:'8%',  left:'50%', tx:'-50%,0',    ta:'center' },
+      { bottom:'8%',left:'6%', tx:'0,0',       ta:'left'   },
+      { bottom:'8%',right:'6%',tx:'0,0',       ta:'right'  },
+      { top:'50%', left:'6%',  tx:'0,-50%',    ta:'left'   },
+      { top:'50%', right:'6%', tx:'0,-50%',    ta:'right'  },
+      { bottom:'8%',left:'50%',tx:'-50%,0',    ta:'center' },
+      { top:'8%',  left:'6%',  tx:'0,0',       ta:'left'   },
+      { bottom:'8%',left:'50%',tx:'-50%,0',    ta:'center' },
     ];
 
     const FONTS = [
@@ -467,6 +460,8 @@
     function applyLayout() {
       const L = LAYOUTS[Math.floor(Math.random() * LAYOUTS.length)];
       const F = FONTS[Math.floor(Math.random() * FONTS.length)];
+      // Random column width: narrow (160px) to wide (780px)
+      const mw = `${160 + Math.floor(Math.random() * 621)}px`;
       const inner = document.getElementById('promptInner');
       const text  = document.getElementById('promptText');
       inner.style.top    = L.top    || '';
@@ -474,9 +469,8 @@
       inner.style.left   = L.left   || '';
       inner.style.right  = L.right  || '';
       inner.style.transform = `translate(${L.tx})`;
-      text.style.fontSize   = L.fs;
       text.style.textAlign  = L.ta;
-      text.style.maxWidth   = L.mw;
+      text.style.maxWidth   = mw;
       text.style.fontWeight = F.fw;
       text.style.fontFamily = F.family;
       text.style.fontStyle  = F.style;
@@ -488,54 +482,41 @@
       if (driftTimer) clearInterval(driftTimer);
       const text = document.getElementById('promptText');
       const step = () => {
-        text.style.setProperty('--dx', `${(Math.random()-0.5)*14}px`);
-        text.style.setProperty('--dy', `${(Math.random()-0.5)*14}px`);
+        text.style.setProperty('--dx', `${(Math.random()-0.5)*60}px`);
+        text.style.setProperty('--dy', `${(Math.random()-0.5)*60}px`);
       };
       step();
-      driftTimer = setInterval(() => step(), 3000 + Math.random()*2000);
+      driftTimer = setInterval(() => step(), 2500 + Math.random()*2000);
     }
 
     // ── State ────────────────────────────────────────────────────────────────
-    let lastIndex = -1;
-    let hintDismissed = false;
+    let busy = false;
 
     async function showPrompt(finalText) {
-      if (!hintDismissed) {
-        document.getElementById('kbdHint').classList.add('gone');
-        hintDismissed = true;
-      }
       const textEl = document.getElementById('promptText');
       const artWrap = document.getElementById('artWrap');
 
       artWrap.classList.remove('visible');
       textEl.classList.remove('visible');
 
-      // Start loading video in parallel
       const videoPromise = loadVideo();
-
-      // Wait for fade out
       await new Promise(r => setTimeout(r, 350));
 
-      // Shuffle phase — bypass transition temporarily
+      // Shuffle phase
       textEl.style.transition = 'none';
       textEl.style.opacity = '1';
-
       const delays = [100, 100, 110, 120, 140, 170, 210, 260, 330];
       for (const ms of delays) {
         textEl.textContent = prompts[Math.floor(Math.random() * prompts.length)];
         await new Promise(r => setTimeout(r, ms));
       }
 
-      // Land on final
       textEl.textContent = finalText;
       applyLayout();
       startDrift();
-
-      // Restore transitions
       textEl.style.transition = '';
       textEl.style.opacity = '';
 
-      // Fade in with video
       const url = await videoPromise;
       if (url) {
         const frame = randomVideoFrame();
@@ -553,33 +534,36 @@
       textEl.classList.add('visible');
     }
 
-    function generateIcebreaker() {
-      let index;
-      do { index = Math.floor(Math.random() * prompts.length); }
-      while (index === lastIndex && prompts.length > 1);
-      lastIndex = index;
-      showPrompt(prompts[index]);
-    }
-
-    async function generateAIPrompt() {
-      const btn = document.getElementById('aiBtn');
+    async function generate() {
+      if (busy) return;
+      busy = true;
+      const btn = document.getElementById('genBtn');
       btn.disabled = true;
       btn.textContent = 'thinking...';
       try {
         const res = await fetch('/api/generate-prompt', { method: 'POST' });
-        if (!res.ok) throw new Error('api error');
+        if (!res.ok) throw new Error();
         const { prompt } = await res.json();
-        showPrompt(prompt);
-      } catch (e) {
-        generateIcebreaker();
+        await showPrompt(prompt);
+      } catch {
+        // fallback to local prompt
+        const index = Math.floor(Math.random() * prompts.length);
+        await showPrompt(prompts[index]);
       } finally {
+        busy = false;
         btn.disabled = false;
-        btn.textContent = 'surprise me (ai)';
+        btn.textContent = 'generate icebreaker';
       }
     }
 
+    // Click anywhere (except the button itself) also triggers
+    document.addEventListener('click', e => {
+      if (!e.target.closest('#genBtn') && !e.target.closest('#promptText')) generate();
+    });
+
     // Copy to clipboard on prompt click
-    document.getElementById('promptText').addEventListener('click', () => {
+    document.getElementById('promptText').addEventListener('click', e => {
+      e.stopPropagation();
       const text = document.getElementById('promptText').textContent;
       if (!text) return;
       navigator.clipboard.writeText(text).then(() => {
@@ -589,11 +573,11 @@
       });
     });
 
-    // Spacebar shortcut
+    // Spacebar
     document.addEventListener('keydown', e => {
       if (e.code === 'Space' && e.target.tagName !== 'BUTTON') {
         e.preventDefault();
-        generateIcebreaker();
+        generate();
       }
     });
   </script>
