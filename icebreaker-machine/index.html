@@ -514,8 +514,9 @@
           // else: fast enough — passes through
         }
 
-        // ── Cup physics: circle-vs-segment collision for each wall ────────────
-        if (pCup) {
+        // ── Cup physics: only active once chicken has dropped past the barrier ──
+        const barrierYCup = H * 0.62;
+        if (pCup && pBtn.y > barrierYCup) {
           const lw = pCup.x - pCup.w / 2;   // left wall x
           const rw = pCup.x + pCup.w / 2;   // right wall x
           const cupTop  = pCup.y;
