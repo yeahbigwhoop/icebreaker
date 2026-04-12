@@ -93,7 +93,8 @@
       position: fixed;
       inset: 0;
       pointer-events: none;
-      z-index: 15;
+      z-index: 25;
+      mix-blend-mode: difference;
     }
   </style>
 </head>
@@ -453,7 +454,7 @@
       };
       pBtn = {
         x: W * (0.25 + Math.random() * 0.5),
-        y: H * 0.18,
+        y: H * 0.38,   // bottom of chicken at 38% — well above barrier at 52%
         vx: (Math.random() - 0.5) * 3,
         vy: 0,
         r: BTN_R
@@ -481,14 +482,16 @@
         pBtn.x += pBtn.vx;
         pBtn.y += pBtn.vy;
 
-        // Side walls
+        // pBtn.y = bottom edge of chicken (feet/drumstick tip)
+        // Side walls (use half-width for horizontal bounds)
         if (pBtn.x - BTN_R < 0)  { pBtn.x = BTN_R;     pBtn.vx =  Math.abs(pBtn.vx) * BOUNCE_DAMP; }
         if (pBtn.x + BTN_R > W)  { pBtn.x = W - BTN_R; pBtn.vx = -Math.abs(pBtn.vx) * BOUNCE_DAMP; }
-        // Ceiling
-        if (pBtn.y - BTN_R < 0)  { pBtn.y = BTN_R;     pBtn.vy =  Math.abs(pBtn.vy) * BOUNCE_DAMP; }
-        // Floor (only if missed the cup entirely)
-        if (pBtn.y + BTN_R > H)  {
-          pBtn.y = H - BTN_R;
+        // Ceiling — top of chicken = pBtn.y - chickenH (approximate with 2*BTN_R)
+        const approxChickenH = document.getElementById('chickenImg').offsetHeight || BTN_R * 2;
+        if (pBtn.y - approxChickenH < 0) { pBtn.y = approxChickenH; pBtn.vy = Math.abs(pBtn.vy) * BOUNCE_DAMP; }
+        // Floor
+        if (pBtn.y > H) {
+          pBtn.y = H;
           pBtn.vy = -Math.abs(pBtn.vy) * BOUNCE_DAMP;
           pBtn.vx *= FLOOR_SETTLE;
           if (Math.abs(pBtn.vy) < 1.2) pBtn.vy = 0;
@@ -497,13 +500,12 @@
 
         // ── Barrier: solid unless dropped with sufficient downward speed ────────
         const barrierY = H * 0.52;
-        if (pBtn.y + BTN_R > barrierY && pBtn.vy > 0) {
+        if (pBtn.y > barrierY && pBtn.vy > 0) {
           if (pBtn.vy < DROP_THRESHOLD) {
-            // Bounce back into upper zone
-            pBtn.y = barrierY - BTN_R;
+            pBtn.y = barrierY;
             pBtn.vy = -Math.abs(pBtn.vy) * BOUNCE_DAMP;
           }
-          // else: fast enough drop — passes through freely
+          // else: fast enough — passes through
         }
 
         // ── Cup physics: circle-vs-segment collision for each wall ────────────
@@ -547,8 +549,9 @@
             bounceHorizSeg(cupBot, lw, rw, +1);
 
             // ── Score check ──────────────────────────────────────────────────
+            // pBtn.y = chicken bottom tip — score when tip enters cup opening
             const inX = Math.abs(pBtn.x - pCup.x) < (pCup.w / 2 - BTN_R * 0.15);
-            const inY = pBtn.y > cupTop && pBtn.y < cupTop + pCup.h * 0.6;
+            const inY = pBtn.y > cupTop && pBtn.y < cupTop + pCup.h * 0.5;
             if (!busy && inX && inY && pBtn.vy > 2) {
               scored = true;
               pBtn.vx = 0;
@@ -574,7 +577,7 @@
       const cw = chickenEl.offsetWidth  || BTN_R * 2;
       const ch = chickenEl.offsetHeight || BTN_R * 2;
       chickenEl.style.left = (pBtn.x - cw / 2) + 'px';
-      chickenEl.style.top  = (pBtn.y - ch / 2) + 'px';
+      chickenEl.style.top  = (pBtn.y - ch) + 'px';    // bottom of chicken = pBtn.y
 
       // Bucket image: center horizontally on pCup.x, top = pCup.y - rim offset
       const bucketEl = document.getElementById('bucketImg');
@@ -611,9 +614,10 @@
       const hRequired = DROP_THRESHOLD * DROP_THRESHOLD / (2 * GRAVITY); // ~225px
       let barrierAlpha = 0.16;
       if (dragging && pBtn) {
-        const ballHeight = (barrierY - BTN_R) - pBtn.y;
+        // ballHeight = distance from chicken bottom to barrier
+        const ballHeight = barrierY - pBtn.y;
         const ratio = Math.max(0, Math.min(1, ballHeight / hRequired));
-        barrierAlpha = 0.16 * (1 - ratio);  // invisible at full height
+        barrierAlpha = 0.16 * (1 - ratio);
       }
       if (barrierAlpha > 0.005) {
         ctx.save();
