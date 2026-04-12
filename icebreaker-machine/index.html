@@ -554,16 +554,11 @@
           if (!busy && inX && inY && pBtn.vy > 2) {
             scored = true;
             pBtn.vx = 0;
+            pBtn.vy = 0;
             pBtn.x  = pCup.x;
             document.getElementById('bucketImg').style.zIndex = 22;
             generate();
-            setTimeout(() => {
-              scored = false;
-              freeFall = false;
-              document.getElementById('bucketImg').style.zIndex = 6;
-              pBtn.vy = -(13 + Math.random() * 4);
-              pBtn.vx = (Math.random() - 0.5) * 4;
-            }, 1100);
+            // chicken stays in bucket until user grabs it again (see onDragStart)
           }
         }
 
@@ -663,6 +658,11 @@
     function onDragStart(cx, cy) {
       dragging = true;
       freeFall = false;  // re-grab closes the barrier again
+      // Release chicken from bucket if it was scored
+      if (scored) {
+        scored = false;
+        document.getElementById('bucketImg').style.zIndex = 6;
+      }
       lastDragX = cx; lastDragY = cy;
       velHistory = [];
       pBtn.vx = 0; pBtn.vy = 0;
