@@ -78,13 +78,25 @@
     #chickenImg:active { cursor: grabbing; }
     #chickenImg.disabled { pointer-events: none; opacity: 0.6; }
 
-    /* Bucket — positioned by JS, behind chicken and canvas */
-    #bucketImg {
+    /* Bucket split into two layers so chicken appears inside:
+       back  = top ~20% of image (rim/opening) — sits behind chicken
+       front = bottom ~80% of image (body)     — sits in front of chicken */
+    #bucketBack {
       position: fixed;
       width: 160px;
       height: auto;
       pointer-events: none;
       z-index: 6;
+      clip-path: inset(0 0 78% 0);   /* show only top 22% */
+      filter: drop-shadow(0 4px 16px rgba(0,0,0,0.15));
+    }
+    #bucketFront {
+      position: fixed;
+      width: 160px;
+      height: auto;
+      pointer-events: none;
+      z-index: 22;                    /* always in front of chicken (z=20) */
+      clip-path: inset(22% 0 0 0);   /* show only bottom 78% */
       filter: drop-shadow(0 4px 16px rgba(0,0,0,0.15));
     }
 
@@ -109,8 +121,9 @@
     <div class="copied-hint" id="copiedHint">copied</div>
   </div>
 
-  <img id="chickenImg" src="chicken.png" alt="drop me" draggable="false" />
-  <img id="bucketImg"  src="bucket.png"  alt="cup"     draggable="false" />
+  <img id="bucketBack"  src="bucket.png"  alt="" draggable="false" />
+  <img id="chickenImg"  src="chicken.png" alt="drop me" draggable="false" />
+  <img id="bucketFront" src="bucket.png"  alt="" draggable="false" />
   <canvas id="slingshotCanvas"></canvas>
 
   <script>
@@ -556,7 +569,6 @@
             pBtn.vx = 0;
             pBtn.vy = 0;
             pBtn.x  = pCup.x;
-            document.getElementById('bucketImg').style.zIndex = 22;
             generate();
             // chicken stays in bucket until user grabs it again (see onDragStart)
           }
@@ -585,12 +597,17 @@
       chickenEl.style.left = (pBtn.x - cw / 2) + 'px';
       chickenEl.style.top  = (pBtn.y - ch) + 'px';    // bottom of chicken = pBtn.y
 
-      // Bucket image: center horizontally on pCup.x, top = pCup.y - rim offset
-      const bucketEl = document.getElementById('bucketImg');
-      const bw = bucketEl.offsetWidth  || pCup.bucketImgW;
-      const bh = bucketEl.offsetHeight || pCup.bucketImgH;
-      bucketEl.style.left = (pCup.x - bw / 2) + 'px';
-      bucketEl.style.top  = (pCup.y - bh * pCup.rimOffsetRatio) + 'px';
+      // Bucket: position both layers identically — same src, same coords
+      const bucketBackEl  = document.getElementById('bucketBack');
+      const bucketFrontEl = document.getElementById('bucketFront');
+      const bw = bucketBackEl.offsetWidth  || pCup.bucketImgW;
+      const bh = bucketBackEl.offsetHeight || pCup.bucketImgH;
+      const bLeft = (pCup.x - bw / 2) + 'px';
+      const bTop  = (pCup.y - bh * pCup.rimOffsetRatio) + 'px';
+      bucketBackEl.style.left  = bLeft;
+      bucketBackEl.style.top   = bTop;
+      bucketFrontEl.style.left = bLeft;
+      bucketFrontEl.style.top  = bTop;
 
       drawSling();
       physRaf = requestAnimationFrame(physicsLoop);
@@ -661,7 +678,6 @@
       // Release chicken from bucket if it was scored
       if (scored) {
         scored = false;
-        document.getElementById('bucketImg').style.zIndex = 6;
       }
       lastDragX = cx; lastDragY = cy;
       velHistory = [];
