@@ -433,7 +433,7 @@
     let velHistory = [];
     let scored = false;  // debounce cup detection
 
-    const DROP_THRESHOLD = 9;  // min downward vy to pass through barrier
+    const DROP_THRESHOLD = 14;  // min downward vy to pass through barrier (free-fall from 540px reaches ~14)
 
     function physicsInit() {
       const W = window.innerWidth, H = window.innerHeight;
@@ -457,7 +457,10 @@
       const chH = chEl.offsetHeight || 180;
       const barrierYSpawn = H * 0.62;
       // clamp: bottom must be >= chH (fully on screen) and <= barrierYSpawn - 20
-      const spawnY = Math.min(barrierYSpawn - 20, Math.max(chH + 10, H * 0.28));
+      // Spawn at most 180px above barrier so free-fall never reaches DROP_THRESHOLD (14)
+      // v = sqrt(2 * 0.18 * 180) ≈ 8.1 < 14 — always bounces on barrier naturally
+      const maxFallDist = 180;
+      const spawnY = Math.max(chH + 10, barrierYSpawn - maxFallDist);
       pBtn = {
         x: W * (0.25 + Math.random() * 0.5),
         y: spawnY,
