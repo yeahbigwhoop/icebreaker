@@ -431,9 +431,10 @@
     let dragging = false;
     let lastDragX = 0, lastDragY = 0;
     let velHistory = [];
-    let scored = false;  // debounce cup detection
+    let scored = false;
+    let intentionalDrop = false;  // set on drag release — always passes through barrier
 
-    const DROP_THRESHOLD = 14;  // min downward vy to pass through barrier (free-fall from 540px reaches ~14)
+    const DROP_THRESHOLD = 14;  // only used for free-fall bounce; intentional drops always pass through
 
     function physicsInit() {
       const W = window.innerWidth, H = window.innerHeight;
@@ -507,15 +508,20 @@
           if (Math.abs(pBtn.vx) < 0.3) pBtn.vx = 0;
         }
 
-        // ── Barrier: solid unless dropped with sufficient downward speed ────────
+        // ── Barrier ───────────────────────────────────────────────────────────
         const barrierY = H * 0.62;
         if (pBtn.y > barrierY && pBtn.vy > 0) {
-          if (pBtn.vy < DROP_THRESHOLD) {
+          if (intentionalDrop) {
+            // User deliberately dropped — let it through, clear flag
+            intentionalDrop = false;
+          } else if (pBtn.vy < DROP_THRESHOLD) {
+            // Accidental bounce — reflect back up
             pBtn.y = barrierY;
             pBtn.vy = -Math.abs(pBtn.vy) * BOUNCE_DAMP;
           }
-          // else: fast enough — passes through
         }
+        // Reset intentionalDrop if chicken bounced back up above barrier
+        if (pBtn.y < barrierY - 20) intentionalDrop = false;
 
         // ── Cup physics ───────────────────────────────────────────────────────
         // pBtn.x/y = center/bottom-tip of chicken (collision point = drumstick tip)
@@ -678,6 +684,7 @@
     function onDragEnd() {
       if (!dragging) return;
       dragging = false;
+      intentionalDrop = true;  // next barrier crossing is deliberate
 
       const win = velHistory.filter(v => Date.now() - v.t < 80);
       if (win.length >= 2) {
