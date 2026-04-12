@@ -14,9 +14,13 @@
       background: #f5f1ea;
     }
 
-    /* Video frame — sits behind TV frame; JS positions it to match TV screen area */
+    /* Video frame — full viewport width, upper portion, behind TV frame */
     .art-wrap {
       position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 60vh;
       opacity: 0;
       overflow: hidden;
       transition: opacity 1.2s ease;
@@ -454,6 +458,7 @@
     let velHistory = [];
     let scored = false;
     let freeFall = false;  // true after drag release — barrier transparent until floor hit
+    let scoreCount = 0;    // increments each score; bucket speeds up 10% per score
 
     const DROP_THRESHOLD = 14;  // used only for drawSling visual fade
 
@@ -501,8 +506,9 @@
       if (!pBtn) { physRaf = requestAnimationFrame(physicsLoop); return; }
 
       // Oscillate cup (x only — y is fixed relative to bottom)
+      // Speed increases 10% per score: base 0.011 × 1.1^scoreCount
       if (pCup) {
-        pCup.phase += 0.011;
+        pCup.phase += 0.011 * Math.pow(1.1, scoreCount);
         const margin = pCup.bucketImgW / 2 + 30;
         pCup.x = margin + (W - margin * 2) * 0.5 * (1 + Math.sin(pCup.phase));
         // Keep y locked to bottom (window resize resilience)
@@ -574,6 +580,7 @@
           const inY = tipY > cupTop && tipY < cupTop + pCup.h * 0.5;
           if (!busy && inX && inY && pBtn.vy > 2) {
             scored = true;
+            scoreCount++;
             pBtn.vx = 0;
             pBtn.vy = 0;
             pBtn.x  = pCup.x;
@@ -640,21 +647,20 @@
       cvs.height = window.innerHeight;
       ctx.clearRect(0, 0, cvs.width, cvs.height);
 
-      // ── Barrier line — fades while dragging upward (previews drop-through) ──
+      // ── Barrier line — fades while dragging upward or in freeFall ──────────
       const barrierY = cvs.height * 0.62;
-      let barrierAlpha = freeFall ? 0 : 0.16;
+      let barrierAlpha = freeFall ? 0 : 0.55;
       if (dragging && pBtn) {
-        // fade as chicken is lifted higher above the barrier
-        const hRequired = DROP_THRESHOLD * DROP_THRESHOLD / (2 * GRAVITY); // ~225px
+        const hRequired = DROP_THRESHOLD * DROP_THRESHOLD / (2 * GRAVITY);
         const ballHeight = barrierY - pBtn.y;
         const ratio = Math.max(0, Math.min(1, ballHeight / hRequired));
-        barrierAlpha = 0.16 * (1 - ratio * 0.7);
+        barrierAlpha = 0.55 * (1 - ratio * 0.7);
       }
       if (barrierAlpha > 0.005) {
         ctx.save();
-        ctx.setLineDash([5, 10]);
+        ctx.setLineDash([8, 8]);
         ctx.strokeStyle = `rgba(255,255,255,${barrierAlpha})`;
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(0, barrierY);
         ctx.lineTo(cvs.width, barrierY);
@@ -778,15 +784,12 @@
       }
 
       textEl.textContent = finalText;
-      applyStyle();
+      // Font stays as the default DM Sans (same as shuffle) — no applyStyle() call
       textEl.style.transition = '';
       textEl.style.opacity = '';
 
-      // Text is fixed at top-left via CSS; no repositioning needed.
-
       const url = await videoPromise;
       if (url) {
-        positionVideoInTV();
         bgVideo.src = url;
         bgVideo.load();
         bgVideo.oncanplay = () => { bgVideo.playbackRate = 0.7; };
