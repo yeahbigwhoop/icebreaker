@@ -681,7 +681,12 @@
     function onDragEnd() {
       if (!dragging) return;
       dragging = false;
-      intentionalDrop = true;  // next barrier crossing is deliberate
+      // If released above the barrier, always fall through — no velocity needed
+      const barrierY = window.innerHeight * 0.62;
+      const releaseZone = barrierY - 60;  // must be at least 60px above barrier
+      if (pBtn.y < releaseZone) {
+        intentionalDrop = true;
+      }
 
       const win = velHistory.filter(v => Date.now() - v.t < 80);
       if (win.length >= 2) {
