@@ -458,7 +458,8 @@
     let velHistory = [];
     let scored = false;
     let freeFall = false;  // true after drag release — barrier transparent until floor hit
-    let scoreCount = 0;    // increments each score; bucket speeds up 10% per score
+    let scoreCount = 0;    // increments each score; bucket speeds up 20% per score
+    let cupSpeedMult = 1.0; // eases to 0 on score, back to 1 on re-grab
 
     const MIN_DROP_HEIGHT = 300; // px above barrier chicken must be lifted to drop through
 
@@ -505,9 +506,11 @@
       const W = window.innerWidth, H = window.innerHeight;
       if (!pBtn) { physRaf = requestAnimationFrame(physicsLoop); return; }
 
-      // Oscillate cup — pauses while chicken is in the bucket, resumes on re-grab
+      // Oscillate cup — eases to a stop on score, eases back in on re-grab
       if (pCup) {
-        if (!scored) pCup.phase += 0.014 * Math.pow(1.2, scoreCount);
+        const targetMult = scored ? 0 : 1;
+        cupSpeedMult += (targetMult - cupSpeedMult) * 0.04;
+        pCup.phase += 0.014 * Math.pow(1.2, scoreCount) * cupSpeedMult;
         const margin = pCup.bucketImgW / 2 + 30;
         pCup.x = margin + (W - margin * 2) * 0.5 * (1 + Math.sin(pCup.phase));
         // Keep y locked to bottom (window resize resilience)
