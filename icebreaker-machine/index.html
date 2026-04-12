@@ -432,9 +432,9 @@
     let lastDragX = 0, lastDragY = 0;
     let velHistory = [];
     let scored = false;
-    let intentionalDrop = false;  // set on drag release — always passes through barrier
+    let freeFall = false;  // true after drag release — barrier transparent until floor hit
 
-    const DROP_THRESHOLD = 14;  // only used for free-fall bounce; intentional drops always pass through
+    const DROP_THRESHOLD = 14;  // used only for drawSling visual fade
 
     function physicsInit() {
       const W = window.innerWidth, H = window.innerHeight;
@@ -470,6 +470,7 @@
         r: BTN_R
       };
       scored = false;
+      freeFall = false;
       if (physRaf) cancelAnimationFrame(physRaf);
       physicsLoop();
     }
@@ -506,18 +507,15 @@
           pBtn.vx *= FLOOR_SETTLE;
           if (Math.abs(pBtn.vy) < 1.2) pBtn.vy = 0;
           if (Math.abs(pBtn.vx) < 0.3) pBtn.vx = 0;
+          freeFall = false;  // barrier becomes solid again after floor contact
         }
 
         // ── Barrier ───────────────────────────────────────────────────────────
+        // freeFall = true after user releases chicken — barrier stays open until floor hit
         const barrierY = H * 0.62;
-        if (pBtn.y > barrierY && pBtn.vy > 0) {
-          if (intentionalDrop) {
-            intentionalDrop = false;  // used up — let it through
-          } else {
-            // Natural bounce — always reflect back
-            pBtn.y = barrierY;
-            pBtn.vy = -Math.abs(pBtn.vy) * BOUNCE_DAMP;
-          }
+        if (!freeFall && pBtn.y > barrierY && pBtn.vy > 0) {
+          pBtn.y = barrierY;
+          pBtn.vy = -Math.abs(pBtn.vy) * BOUNCE_DAMP;
         }
 
         // ── Cup physics ───────────────────────────────────────────────────────
@@ -561,6 +559,7 @@
             generate();
             setTimeout(() => {
               scored = false;
+              freeFall = false;
               document.getElementById('bucketImg').style.zIndex = 6;
               pBtn.vy = -(13 + Math.random() * 4);
               pBtn.vx = (Math.random() - 0.5) * 4;
@@ -621,15 +620,15 @@
       cvs.height = window.innerHeight;
       ctx.clearRect(0, 0, cvs.width, cvs.height);
 
-      // ── Barrier line — fades when ball is high enough to drop through ────────
+      // ── Barrier line — fades while dragging upward (previews drop-through) ──
       const barrierY = cvs.height * 0.62;
-      const hRequired = DROP_THRESHOLD * DROP_THRESHOLD / (2 * GRAVITY); // ~225px
-      let barrierAlpha = 0.16;
+      let barrierAlpha = freeFall ? 0 : 0.16;
       if (dragging && pBtn) {
-        // ballHeight = distance from chicken bottom to barrier
+        // fade as chicken is lifted higher above the barrier
+        const hRequired = DROP_THRESHOLD * DROP_THRESHOLD / (2 * GRAVITY); // ~225px
         const ballHeight = barrierY - pBtn.y;
         const ratio = Math.max(0, Math.min(1, ballHeight / hRequired));
-        barrierAlpha = 0.16 * (1 - ratio);
+        barrierAlpha = 0.16 * (1 - ratio * 0.7);
       }
       if (barrierAlpha > 0.005) {
         ctx.save();
@@ -663,7 +662,7 @@
 
     function onDragStart(cx, cy) {
       dragging = true;
-      intentionalDrop = false;  // reset on each grab
+      freeFall = false;  // re-grab closes the barrier again
       lastDragX = cx; lastDragY = cy;
       velHistory = [];
       pBtn.vx = 0; pBtn.vy = 0;
@@ -682,8 +681,7 @@
     function onDragEnd() {
       if (!dragging) return;
       dragging = false;
-      // Always allow passing through on release — barrier only blocks free bouncing
-      intentionalDrop = true;
+      freeFall = true;  // barrier opens — stays open until chicken hits floor
 
       const win = velHistory.filter(v => Date.now() - v.t < 80);
       if (win.length >= 2) {
