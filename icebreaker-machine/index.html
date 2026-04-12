@@ -512,16 +512,12 @@
         const barrierY = H * 0.62;
         if (pBtn.y > barrierY && pBtn.vy > 0) {
           if (intentionalDrop) {
-            // User deliberately dropped — let it through, clear flag
-            intentionalDrop = false;
+            intentionalDrop = false;  // clear after passing through once
           } else if (pBtn.vy < DROP_THRESHOLD) {
-            // Accidental bounce — reflect back up
             pBtn.y = barrierY;
             pBtn.vy = -Math.abs(pBtn.vy) * BOUNCE_DAMP;
           }
         }
-        // Reset intentionalDrop if chicken bounced back up above barrier
-        if (pBtn.y < barrierY - 20) intentionalDrop = false;
 
         // ── Cup physics ───────────────────────────────────────────────────────
         // pBtn.x/y = center/bottom-tip of chicken (collision point = drumstick tip)
@@ -666,6 +662,7 @@
 
     function onDragStart(cx, cy) {
       dragging = true;
+      intentionalDrop = false;  // reset on each grab
       lastDragX = cx; lastDragY = cy;
       velHistory = [];
       pBtn.vx = 0; pBtn.vy = 0;
