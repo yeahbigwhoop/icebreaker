@@ -96,7 +96,6 @@
       height: auto;
       pointer-events: none;
       z-index: 6;
-      clip-path: inset(0 0 78% 0);
     }
     #bucketFront {
       position: fixed;
@@ -104,7 +103,6 @@
       height: auto;
       pointer-events: none;
       z-index: 22;
-      clip-path: inset(22% 0 0 0);
     }
 
     /* Canvas overlay — power arc + barrier line only */
@@ -128,7 +126,7 @@
     <div class="copied-hint" id="copiedHint">copied</div>
   </div>
 
-  <img id="bucketBack"  src="bucket_front.png"  alt="" draggable="false" />
+  <img id="bucketBack"  src="bucket_back.png"  alt="" draggable="false" />
   <img id="chickenImg"  src="chicken.png" alt="drop me" draggable="false" />
   <img id="bucketFront" src="bucket_front.png"  alt="" draggable="false" />
   <canvas id="slingshotCanvas"></canvas>
