@@ -64,42 +64,37 @@
     }
     .copied-hint.show { opacity: 1; }
 
-    /* Floating circle button — positioned entirely by JS */
-    .float-btn {
+    /* Chicken — draggable ball */
+    #chickenImg {
       position: fixed;
       width: 148px;
-      height: 148px;
-      border-radius: 50%;
-      border: 1px solid rgba(255,255,255,0.45);
-      background: none;
-      color: rgba(255,255,255,0.6);
-      font-family: 'DM Sans', sans-serif;
-      font-size: 17px;
-      font-weight: 300;
-      letter-spacing: 0.01em;
-      text-transform: lowercase;
+      height: auto;
       cursor: grab;
-      mix-blend-mode: difference;
-      transition: color 0.3s, border-color 0.3s;
-      line-height: 1.7;
-      padding: 0 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
       user-select: none;
+      pointer-events: all;
+      z-index: 20;
+      mix-blend-mode: multiply;   /* white background disappears against cream */
+      filter: drop-shadow(0 4px 12px rgba(0,0,0,0.12));
     }
-    .float-btn:active { cursor: grabbing; }
-    .float-btn:hover { color: #fff; border-color: rgba(255,255,255,0.8); }
-    .float-btn:disabled { cursor: grab; }
+    #chickenImg:active { cursor: grabbing; }
+    #chickenImg.disabled { pointer-events: none; opacity: 0.6; }
 
-    /* Slingshot rubber band canvas */
+    /* Bucket — positioned by JS, sits on canvas layer */
+    #bucketImg {
+      position: fixed;
+      width: 160px;
+      height: auto;
+      pointer-events: none;
+      z-index: 5;
+      filter: drop-shadow(0 4px 16px rgba(0,0,0,0.15));
+    }
+
+    /* Canvas overlay — power arc + barrier line only */
     #slingshotCanvas {
       position: fixed;
       inset: 0;
       pointer-events: none;
-      mix-blend-mode: difference;
-      z-index: 10;
+      z-index: 15;
     }
   </style>
 </head>
@@ -114,7 +109,8 @@
     <div class="copied-hint" id="copiedHint">copied</div>
   </div>
 
-  <button class="float-btn" id="genBtn">drop<br>me</button>
+  <img id="chickenImg" src="chicken.jpg" alt="drop me" draggable="false" />
+  <img id="bucketImg"  src="bucket.png"  alt="cup"     draggable="false" />
   <canvas id="slingshotCanvas"></canvas>
 
   <script>
@@ -441,17 +437,24 @@
 
     function physicsInit() {
       const W = window.innerWidth, H = window.innerHeight;
-      const cupW = BTN_R * 2.3;
-      const cupH = BTN_R * 1.2;
+      // Bucket image is 160×175px. Opening (rim) is ~top 12% of image.
+      // We anchor pCup.y to the rim, cupH = inner depth (~80% of image height).
+      const bucketImgW = 160;
+      const bucketImgH = 175;
+      const cupW = bucketImgW * 0.72;          // inner opening (~72% of bucket width)
+      const cupH = bucketImgH * 0.75;          // inner depth
+      const bucketY = H - bucketImgH - 20;     // image top (bucket sits near bottom)
+      const rimOffsetRatio = 0.08;             // rim is 8% down from image top
       pCup = {
         x: W * 0.5,
-        y: H - cupH - 30,
+        y: bucketY + bucketImgH * rimOffsetRatio,   // physics cupTop = bucket rim
         w: cupW, h: cupH,
-        phase: Math.random() * Math.PI * 2
+        phase: Math.random() * Math.PI * 2,
+        bucketImgH, bucketImgW, rimOffsetRatio       // store for DOM positioning
       };
       pBtn = {
         x: W * (0.25 + Math.random() * 0.5),
-        y: H * 0.22,                        // starts in upper zone
+        y: H * 0.18,
         vx: (Math.random() - 0.5) * 3,
         vy: 0,
         r: BTN_R
@@ -465,11 +468,13 @@
       const W = window.innerWidth, H = window.innerHeight;
       if (!pBtn) { physRaf = requestAnimationFrame(physicsLoop); return; }
 
-      // Oscillate cup
+      // Oscillate cup (x only — y is fixed relative to bottom)
       if (pCup) {
         pCup.phase += 0.011;
-        const margin = pCup.w / 2 + 55;
+        const margin = pCup.bucketImgW / 2 + 30;
         pCup.x = margin + (W - margin * 2) * 0.5 * (1 + Math.sin(pCup.phase));
+        // Keep y locked to bottom (window resize resilience)
+        pCup.y = H - pCup.bucketImgH * (1 - pCup.rimOffsetRatio) - 20;
       }
 
       if (!dragging) {
@@ -565,10 +570,19 @@
         }
       }
 
-      // Apply button position to DOM
-      const btnEl = document.getElementById('genBtn');
-      btnEl.style.left = (pBtn.x - BTN_R) + 'px';
-      btnEl.style.top  = (pBtn.y - BTN_R) + 'px';
+      // Apply positions to DOM
+      const chickenEl = document.getElementById('chickenImg');
+      const cw = chickenEl.offsetWidth  || BTN_R * 2;
+      const ch = chickenEl.offsetHeight || BTN_R * 2;
+      chickenEl.style.left = (pBtn.x - cw / 2) + 'px';
+      chickenEl.style.top  = (pBtn.y - ch / 2) + 'px';
+
+      // Bucket image: center horizontally on pCup.x, top = pCup.y - rim offset
+      const bucketEl = document.getElementById('bucketImg');
+      const bw = bucketEl.offsetWidth  || pCup.bucketImgW;
+      const bh = bucketEl.offsetHeight || pCup.bucketImgH;
+      bucketEl.style.left = (pCup.x - bw / 2) + 'px';
+      bucketEl.style.top  = (pCup.y - bh * pCup.rimOffsetRatio) + 'px';
 
       drawSling();
       physRaf = requestAnimationFrame(physicsLoop);
@@ -612,30 +626,6 @@
         ctx.lineTo(cvs.width, barrierY);
         ctx.stroke();
         ctx.setLineDash([]);
-        ctx.restore();
-      }
-
-      // ── Draw cup ────────────────────────────────────────────────────────────
-      if (pCup && pBtn) {
-        const { x, y, w, h } = pCup;
-        // Glow proportional to horizontal alignment with cup
-        const dx = Math.abs(pBtn.x - x);
-        const xAlign = Math.max(0, 1 - dx / (w * 2));
-        const alpha = 0.3 + xAlign * 0.45;
-        const rimExtra = 14;
-
-        ctx.save();
-        ctx.strokeStyle = `rgba(255,255,255,${scored ? 0.85 : alpha})`;
-        ctx.lineWidth = scored ? 2.5 : 1.5;
-
-        ctx.beginPath();
-        ctx.moveTo(x - w/2 - rimExtra, y);
-        ctx.lineTo(x - w/2, y);
-        ctx.lineTo(x - w/2, y + h);
-        ctx.quadraticCurveTo(x, y + h + h * 0.32, x + w/2, y + h);
-        ctx.lineTo(x + w/2, y);
-        ctx.lineTo(x + w/2 + rimExtra, y);
-        ctx.stroke();
         ctx.restore();
       }
 
@@ -695,11 +685,11 @@
       velHistory = [];
     }
 
-    const btnEl = document.getElementById('genBtn');
-    btnEl.addEventListener('mousedown',  e => { e.preventDefault(); onDragStart(e.clientX, e.clientY); });
+    const chickenEl = document.getElementById('chickenImg');
+    chickenEl.addEventListener('mousedown',  e => { e.preventDefault(); onDragStart(e.clientX, e.clientY); });
     document.addEventListener('mousemove', e => onDragMove(e.clientX, e.clientY));
     document.addEventListener('mouseup',   () => onDragEnd());
-    btnEl.addEventListener('touchstart',  e => { e.preventDefault(); const t = e.touches[0]; onDragStart(t.clientX, t.clientY); }, { passive: false });
+    chickenEl.addEventListener('touchstart',  e => { e.preventDefault(); const t = e.touches[0]; onDragStart(t.clientX, t.clientY); }, { passive: false });
     document.addEventListener('touchmove', e => { if (dragging) { e.preventDefault(); const t = e.touches[0]; onDragMove(t.clientX, t.clientY); } }, { passive: false });
     document.addEventListener('touchend',  () => onDragEnd());
 
@@ -715,14 +705,14 @@
 
     function startThinking() {
       thinkIdx = Math.floor(Math.random() * THINKING.length);
-      const btn = document.getElementById('genBtn');
-      const show = () => { btn.innerHTML = THINKING[thinkIdx++ % THINKING.length]; };
-      show();
-      thinkTimer = setInterval(show, 380);
+      const el = document.getElementById('chickenImg');
+      el.classList.add('disabled');
+      thinkTimer = setInterval(() => { thinkIdx++; }, 380);
     }
     function stopThinking() {
       clearInterval(thinkTimer);
-      document.getElementById('genBtn').innerHTML = 'drop<br>me';
+      const el = document.getElementById('chickenImg');
+      el.classList.remove('disabled');
     }
 
     // ── State ────────────────────────────────────────────────────────────────
@@ -784,8 +774,6 @@
     async function generate() {
       if (busy) return;
       busy = true;
-      const btn = document.getElementById('genBtn');
-      btn.disabled = true;
       startThinking();
       try {
         const res = await fetch('/api/generate-prompt', { method: 'POST' });
@@ -797,7 +785,6 @@
         await showPrompt(prompts[index]);
       } finally {
         busy = false;
-        btn.disabled = false;
         stopThinking();
       }
     }
