@@ -14,12 +14,13 @@
       background: #f5f1ea;
     }
 
-    /* Video frame — positioned and sized by JS each generation */
+    /* Video frame — sits behind TV frame; JS positions it to match TV screen area */
     .art-wrap {
       position: fixed;
       opacity: 0;
       overflow: hidden;
       transition: opacity 1.2s ease;
+      z-index: 1;
     }
     .art-wrap.visible { opacity: 1; }
     #bgVideo {
@@ -28,20 +29,35 @@
       display: block;
     }
 
-    /* Floating prompt text */
+    /* Vintage TV — sits above the video; transparent screen cutout reveals video */
+    #tvFrame {
+      position: fixed;
+      top: 2vh;
+      left: 2vw;
+      height: 57vh;      /* constrained so TV stays above the barrier */
+      width: auto;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    /* Floating prompt text — fixed at top-left */
     #promptInner {
       position: fixed;
+      top: 24px;
+      left: 24px;
       mix-blend-mode: difference;
       pointer-events: none;
+      z-index: 15;
+      max-width: 55vw;
     }
 
     .prompt-text {
       font-family: 'DM Sans', sans-serif;
-      font-size: 30px;
+      font-size: 90px;
       font-weight: 300;
       color: #fff;
-      text-align: center;
-      line-height: 1.4;
+      text-align: left;
+      line-height: 1.15;
       letter-spacing: -0.02em;
       opacity: 0;
       transition: opacity 1s ease 0.3s;
@@ -115,6 +131,9 @@
   <div class="art-wrap" id="artWrap">
     <video id="bgVideo" autoplay muted loop playsinline></video>
   </div>
+
+  <!-- TV frame sits above the video; its transparent screen cutout reveals the video -->
+  <img id="tvFrame" src="tv.png" alt="" draggable="false" />
 
   <div id="promptInner">
     <div class="prompt-text" id="promptText" title="click to copy"></div>
@@ -319,31 +338,20 @@
     // ── Video background ──────────────────────────────────────────────────────
     const bgVideo = document.getElementById('bgVideo');
 
-    function randomVideoFrame() {
-      // Cap at ~35% of viewport area — try random dims, scale down if too large
-      let w = 28 + Math.random() * 58;   // vw
-      let h = 22 + Math.random() * 62;   // vh
-      const area = (w / 100) * (h / 100);
-      if (area > 0.35) {
-        const scale = Math.sqrt(0.35 / area);
-        w *= scale; h *= scale;
-      }
-      const maxLeft = 95 - w;
-      const left = -8 + Math.random() * (maxLeft + 12);
-      const maxTop = 95 - h;
-      const top  = -4 + Math.random() * (maxTop + 12);
+    // TV screen position as fractions of the TV image dimensions.
+    // Tweak these if the video doesn't line up perfectly with the screen cutout.
+    const TV_SCREEN = { xPct: 0.07, yPct: 0.05, wPct: 0.595, hPct: 0.745 };
 
-      const roll = Math.random();
-      let br;
-      if      (roll < 0.20) br = '0px';
-      else if (roll < 0.42) br = `${4 + Math.floor(Math.random() * 24)}px`;
-      else if (roll < 0.58) br = '50%';
-      else if (roll < 0.72) br = '999px';
-      else {
-        const r = () => `${Math.floor(Math.random() * 55)}%`;
-        br = `${r()} ${r()} ${r()} ${r()}`;
-      }
-      return { w: `${w}vw`, h: `${h}vh`, top: `${top}vh`, left: `${left}vw`, br };
+    function positionVideoInTV() {
+      const tv = document.getElementById('tvFrame');
+      if (!tv.complete || tv.naturalWidth === 0) return;  // image not loaded yet
+      const rect = tv.getBoundingClientRect();
+      const artWrap = document.getElementById('artWrap');
+      artWrap.style.left         = (rect.left + rect.width  * TV_SCREEN.xPct) + 'px';
+      artWrap.style.top          = (rect.top  + rect.height * TV_SCREEN.yPct) + 'px';
+      artWrap.style.width        = (rect.width  * TV_SCREEN.wPct) + 'px';
+      artWrap.style.height       = (rect.height * TV_SCREEN.hPct) + 'px';
+      artWrap.style.borderRadius = '0';
     }
 
     async function loadVideo() {
@@ -422,8 +430,8 @@
     // ── Font / layout style ───────────────────────────────────────────────────
     function applyStyle() {
       const F = FONTS[Math.floor(Math.random() * FONTS.length)];
-      const mw = `${160 + Math.floor(Math.random() * 621)}px`;
-      const ta = ['left','center','right'][Math.floor(Math.random()*3)];
+      const mw = `${400 + Math.floor(Math.random() * 500)}px`;  // wider for 90px font
+      const ta = 'left';  // fixed left-align to match top-left text position
       const text = document.getElementById('promptText');
       text.style.maxWidth   = mw;
       text.style.textAlign  = ta;
@@ -774,26 +782,11 @@
       textEl.style.transition = '';
       textEl.style.opacity = '';
 
-      // Place text statically in the upper zone (above barrier)
-      requestAnimationFrame(() => {
-        const inner = document.getElementById('promptInner');
-        const tw = inner.offsetWidth  || 280;
-        const th = inner.offsetHeight || 60;
-        const barrierY = window.innerHeight * 0.62;
-        const maxX = Math.max(40, window.innerWidth  - tw - 40);
-        const maxY = Math.max(40, barrierY - th - 40);
-        inner.style.left = (40 + Math.random() * (maxX - 40)) + 'px';
-        inner.style.top  = (40 + Math.random() * (maxY - 40)) + 'px';
-      });
+      // Text is fixed at top-left via CSS; no repositioning needed.
 
       const url = await videoPromise;
       if (url) {
-        const frame = randomVideoFrame();
-        artWrap.style.width        = frame.w;
-        artWrap.style.height       = frame.h;
-        artWrap.style.top          = frame.top;
-        artWrap.style.left         = frame.left;
-        artWrap.style.borderRadius = frame.br;
+        positionVideoInTV();
         bgVideo.src = url;
         bgVideo.load();
         bgVideo.oncanplay = () => { bgVideo.playbackRate = 0.7; };
@@ -849,8 +842,14 @@
       _chickenImg.addEventListener('load', physicsInit);
     }
     window.addEventListener('resize', () => {
-      // velocities stay, positions will self-correct on next wall bounce
+      positionVideoInTV();
+      // Physics velocities stay; positions self-correct on next wall bounce
     });
+
+    // Position video once TV image is ready
+    const _tvImg = document.getElementById('tvFrame');
+    if (_tvImg.complete) { positionVideoInTV(); }
+    else { _tvImg.addEventListener('load', positionVideoInTV); }
   </script>
 </body>
 </html>
