@@ -512,8 +512,9 @@
         const barrierY = H * 0.62;
         if (pBtn.y > barrierY && pBtn.vy > 0) {
           if (intentionalDrop) {
-            intentionalDrop = false;  // clear after passing through once
-          } else if (pBtn.vy < DROP_THRESHOLD) {
+            intentionalDrop = false;  // used up — let it through
+          } else {
+            // Natural bounce — always reflect back
             pBtn.y = barrierY;
             pBtn.vy = -Math.abs(pBtn.vy) * BOUNCE_DAMP;
           }
@@ -681,12 +682,8 @@
     function onDragEnd() {
       if (!dragging) return;
       dragging = false;
-      // If released above the barrier, always fall through — no velocity needed
-      const barrierY = window.innerHeight * 0.62;
-      const releaseZone = barrierY - 60;  // must be at least 60px above barrier
-      if (pBtn.y < releaseZone) {
-        intentionalDrop = true;
-      }
+      // Always allow passing through on release — barrier only blocks free bouncing
+      intentionalDrop = true;
 
       const win = velHistory.filter(v => Date.now() - v.t < 80);
       if (win.length >= 2) {
