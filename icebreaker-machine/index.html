@@ -33,17 +33,6 @@
       display: block;
     }
 
-    /* Vintage TV — sits above the video; transparent screen cutout reveals video */
-    #tvFrame {
-      position: fixed;
-      top: 2vh;
-      left: 2vw;
-      height: 57vh;      /* constrained so TV stays above the barrier */
-      width: auto;
-      pointer-events: none;
-      z-index: 2;
-    }
-
     /* Floating prompt text — fixed at top-left */
     #promptInner {
       position: fixed;
@@ -136,10 +125,7 @@
     <video id="bgVideo" autoplay muted loop playsinline></video>
   </div>
 
-  <!-- TV frame sits above the video; its transparent screen cutout reveals the video -->
-  <img id="tvFrame" src="tv.png" alt="" draggable="false" onerror="this.style.display='none'" />
-
-  <div id="promptInner">
+<div id="promptInner">
     <div class="prompt-text" id="promptText" title="click to copy"></div>
     <div class="copied-hint" id="copiedHint">copied</div>
   </div>
@@ -342,21 +328,6 @@
     // ── Video background ──────────────────────────────────────────────────────
     const bgVideo = document.getElementById('bgVideo');
 
-    // TV screen position as fractions of the TV image dimensions.
-    // Tweak these if the video doesn't line up perfectly with the screen cutout.
-    const TV_SCREEN = { xPct: 0.07, yPct: 0.05, wPct: 0.595, hPct: 0.745 };
-
-    function positionVideoInTV() {
-      const tv = document.getElementById('tvFrame');
-      if (!tv.complete || tv.naturalWidth === 0) return;  // image not loaded yet
-      const rect = tv.getBoundingClientRect();
-      const artWrap = document.getElementById('artWrap');
-      artWrap.style.left         = (rect.left + rect.width  * TV_SCREEN.xPct) + 'px';
-      artWrap.style.top          = (rect.top  + rect.height * TV_SCREEN.yPct) + 'px';
-      artWrap.style.width        = (rect.width  * TV_SCREEN.wPct) + 'px';
-      artWrap.style.height       = (rect.height * TV_SCREEN.hPct) + 'px';
-      artWrap.style.borderRadius = '0';
-    }
 
     async function loadVideo() {
       try {
@@ -850,14 +821,8 @@
       _chickenImg.addEventListener('load', physicsInit);
     }
     window.addEventListener('resize', () => {
-      positionVideoInTV();
       // Physics velocities stay; positions self-correct on next wall bounce
     });
-
-    // Position video once TV image is ready
-    const _tvImg = document.getElementById('tvFrame');
-    if (_tvImg.complete) { positionVideoInTV(); }
-    else { _tvImg.addEventListener('load', positionVideoInTV); }
   </script>
 </body>
 </html>
