@@ -67,7 +67,7 @@
     /* Chicken — draggable ball */
     #chickenImg {
       position: fixed;
-      width: 148px;
+      width: 90px;
       height: auto;
       cursor: grab;
       user-select: none;
@@ -78,13 +78,13 @@
     #chickenImg:active { cursor: grabbing; }
     #chickenImg.disabled { pointer-events: none; opacity: 0.6; }
 
-    /* Bucket — positioned by JS, sits on canvas layer */
+    /* Bucket — positioned by JS, behind chicken and canvas */
     #bucketImg {
       position: fixed;
       width: 160px;
       height: auto;
       pointer-events: none;
-      z-index: 5;
+      z-index: 6;
       filter: drop-shadow(0 4px 16px rgba(0,0,0,0.15));
     }
 
@@ -452,9 +452,15 @@
         phase: Math.random() * Math.PI * 2,
         bucketImgH, bucketImgW, rimOffsetRatio       // store for DOM positioning
       };
+      // Spawn chicken so its bottom is in the upper third, fully on screen
+      const chEl = document.getElementById('chickenImg');
+      const chH = chEl.offsetHeight || 180;
+      const barrierYSpawn = H * 0.62;
+      // clamp: bottom must be >= chH (fully on screen) and <= barrierYSpawn - 20
+      const spawnY = Math.min(barrierYSpawn - 20, Math.max(chH + 10, H * 0.28));
       pBtn = {
         x: W * (0.25 + Math.random() * 0.5),
-        y: H * 0.38,   // bottom of chicken at 38% — well above barrier at 52%
+        y: spawnY,
         vx: (Math.random() - 0.5) * 3,
         vy: 0,
         r: BTN_R
@@ -487,8 +493,8 @@
         if (pBtn.x - BTN_R < 0)  { pBtn.x = BTN_R;     pBtn.vx =  Math.abs(pBtn.vx) * BOUNCE_DAMP; }
         if (pBtn.x + BTN_R > W)  { pBtn.x = W - BTN_R; pBtn.vx = -Math.abs(pBtn.vx) * BOUNCE_DAMP; }
         // Ceiling — top of chicken = pBtn.y - chickenH (approximate with 2*BTN_R)
-        const approxChickenH = document.getElementById('chickenImg').offsetHeight || BTN_R * 2;
-        if (pBtn.y - approxChickenH < 0) { pBtn.y = approxChickenH; pBtn.vy = Math.abs(pBtn.vy) * BOUNCE_DAMP; }
+        const chH2 = document.getElementById('chickenImg').offsetHeight || BTN_R * 2;
+        if (pBtn.y - chH2 < 0) { pBtn.y = chH2; pBtn.vy = Math.abs(pBtn.vy) * BOUNCE_DAMP; }
         // Floor
         if (pBtn.y > H) {
           pBtn.y = H;
@@ -499,7 +505,7 @@
         }
 
         // ── Barrier: solid unless dropped with sufficient downward speed ────────
-        const barrierY = H * 0.52;
+        const barrierY = H * 0.62;
         if (pBtn.y > barrierY && pBtn.vy > 0) {
           if (pBtn.vy < DROP_THRESHOLD) {
             pBtn.y = barrierY;
@@ -610,7 +616,7 @@
       ctx.clearRect(0, 0, cvs.width, cvs.height);
 
       // ── Barrier line — fades when ball is high enough to drop through ────────
-      const barrierY = cvs.height * 0.52;
+      const barrierY = cvs.height * 0.62;
       const hRequired = DROP_THRESHOLD * DROP_THRESHOLD / (2 * GRAVITY); // ~225px
       let barrierAlpha = 0.16;
       if (dragging && pBtn) {
@@ -657,11 +663,11 @@
     }
     function onDragMove(cx, cy) {
       if (!dragging) return;
-      const barrierY = window.innerHeight * 0.52;
+      const barrierY = window.innerHeight * 0.62;
       pBtn.x += cx - lastDragX;
       pBtn.y += cy - lastDragY;
-      // Hard barrier — cannot drag below the line
-      if (pBtn.y + BTN_R > barrierY) pBtn.y = barrierY - BTN_R;
+      // Hard barrier — chicken bottom cannot cross the line while dragging
+      if (pBtn.y > barrierY) pBtn.y = barrierY;
       lastDragX = cx; lastDragY = cy;
       velHistory.push({ x: cx, y: cy, t: Date.now() });
       if (velHistory.length > 30) velHistory.shift();
@@ -750,7 +756,7 @@
         const inner = document.getElementById('promptInner');
         const tw = inner.offsetWidth  || 280;
         const th = inner.offsetHeight || 60;
-        const barrierY = window.innerHeight * 0.52;
+        const barrierY = window.innerHeight * 0.62;
         const maxX = Math.max(40, window.innerWidth  - tw - 40);
         const maxY = Math.max(40, barrierY - th - 40);
         inner.style.left = (40 + Math.random() * (maxX - 40)) + 'px';
@@ -812,8 +818,13 @@
       }
     });
 
-    // Start physics loop immediately
-    physicsInit();
+    // Start physics after chicken image loads so we know its real height
+    const _chickenImg = document.getElementById('chickenImg');
+    if (_chickenImg.complete) {
+      physicsInit();
+    } else {
+      _chickenImg.addEventListener('load', physicsInit);
+    }
     window.addEventListener('resize', () => {
       // velocities stay, positions will self-correct on next wall bounce
     });
