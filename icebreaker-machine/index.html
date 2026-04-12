@@ -460,7 +460,7 @@
     let freeFall = false;  // true after drag release — barrier transparent until floor hit
     let scoreCount = 0;    // increments each score; bucket speeds up 10% per score
 
-    const DROP_THRESHOLD = 14;  // used only for drawSling visual fade
+    const MIN_DROP_HEIGHT = 160; // px above barrier chicken must be lifted to drop through
 
     function physicsInit() {
       const W = window.innerWidth, H = window.innerHeight;
@@ -647,14 +647,13 @@
       cvs.height = window.innerHeight;
       ctx.clearRect(0, 0, cvs.width, cvs.height);
 
-      // ── Barrier line — fades while dragging upward or in freeFall ──────────
+      // ── Barrier line — fades as chicken is lifted to MIN_DROP_HEIGHT, gone in freeFall
       const barrierY = cvs.height * 0.62;
       let barrierAlpha = freeFall ? 0 : 0.55;
       if (dragging && pBtn) {
-        const hRequired = DROP_THRESHOLD * DROP_THRESHOLD / (2 * GRAVITY);
-        const ballHeight = barrierY - pBtn.y;
-        const ratio = Math.max(0, Math.min(1, ballHeight / hRequired));
-        barrierAlpha = 0.55 * (1 - ratio * 0.7);
+        const ballHeight = barrierY - pBtn.y;          // px above barrier
+        const ratio = Math.max(0, Math.min(1, ballHeight / MIN_DROP_HEIGHT));
+        barrierAlpha = 0.55 * (1 - ratio);             // 0.55 at ground → 0 at min height
       }
       if (barrierAlpha > 0.005) {
         ctx.save();
@@ -711,7 +710,11 @@
     function onDragEnd() {
       if (!dragging) return;
       dragging = false;
-      freeFall = true;  // barrier opens — stays open until chicken hits floor
+      // Only open barrier if chicken was lifted high enough above the line
+      const _barrierY = window.innerHeight * 0.62;
+      if (pBtn && (_barrierY - pBtn.y) >= MIN_DROP_HEIGHT) {
+        freeFall = true;
+      }
 
       const win = velHistory.filter(v => Date.now() - v.t < 80);
       if (win.length >= 2) {
