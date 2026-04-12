@@ -14,13 +14,13 @@
       background: #f5f1ea;
     }
 
-    /* Video frame — full viewport width, upper portion, behind TV frame */
+    /* Video frame — full viewport, behind everything */
     .art-wrap {
       position: fixed;
       top: 0;
       left: 0;
       width: 100vw;
-      height: 60vh;
+      height: 100vh;
       opacity: 0;
       overflow: hidden;
       transition: opacity 1.2s ease;
@@ -508,7 +508,7 @@
       // Oscillate cup (x only — y is fixed relative to bottom)
       // Speed increases 10% per score: base 0.011 × 1.1^scoreCount
       if (pCup) {
-        pCup.phase += 0.011 * Math.pow(1.1, scoreCount);
+        pCup.phase += 0.011 * Math.pow(1.2, scoreCount);
         const margin = pCup.bucketImgW / 2 + 30;
         pCup.x = margin + (W - margin * 2) * 0.5 * (1 + Math.sin(pCup.phase));
         // Keep y locked to bottom (window resize resilience)
