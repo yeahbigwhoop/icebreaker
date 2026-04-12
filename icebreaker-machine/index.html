@@ -446,7 +446,7 @@
 
     // ── Physics ───────────────────────────────────────────────────────────────
     const BTN_R = 74;
-    const GRAVITY = 0.42;
+    const GRAVITY = 0.30;
     const BOUNCE_DAMP = 0.62;
     const FLOOR_SETTLE = 0.8;
 
@@ -508,7 +508,7 @@
       // Oscillate cup (x only — y is fixed relative to bottom)
       // Speed increases 10% per score: base 0.011 × 1.1^scoreCount
       if (pCup) {
-        pCup.phase += 0.022 * Math.pow(1.2, scoreCount);
+        pCup.phase += 0.014 * Math.pow(1.2, scoreCount);
         const margin = pCup.bucketImgW / 2 + 30;
         pCup.x = margin + (W - margin * 2) * 0.5 * (1 + Math.sin(pCup.phase));
         // Keep y locked to bottom (window resize resilience)
