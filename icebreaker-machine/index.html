@@ -514,9 +514,9 @@
           // else: fast enough — passes through
         }
 
-        // ── Cup physics: only active once chicken has dropped past the barrier ──
-        const barrierYCup = H * 0.62;
-        if (pCup && pBtn.y > barrierYCup) {
+        // ── Cup physics: only active when chicken is genuinely near the cup ─────
+        // pBtn.y = chicken bottom tip; cup rim = pCup.y
+        if (pCup && pBtn.y > pCup.y - BTN_R * 3) {
           const lw = pCup.x - pCup.w / 2;   // left wall x
           const rw = pCup.x + pCup.w / 2;   // right wall x
           const cupTop  = pCup.y;
@@ -563,9 +563,12 @@
               scored = true;
               pBtn.vx = 0;
               pBtn.x  = pCup.x;
+              // Bucket in front while chicken is inside
+              document.getElementById('bucketImg').style.zIndex = 22;
               generate();
               setTimeout(() => {
                 scored = false;
+                document.getElementById('bucketImg').style.zIndex = 6;
                 pBtn.vy = -(13 + Math.random() * 4);
                 pBtn.vx = (Math.random() - 0.5) * 4;
               }, 1100);
