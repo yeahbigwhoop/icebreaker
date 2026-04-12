@@ -514,71 +514,67 @@
           // else: fast enough — passes through
         }
 
-        // ── Cup physics: only active when chicken is genuinely near the cup ─────
-        // pBtn.y = chicken bottom tip; cup rim = pCup.y
-        if (pCup && pBtn.y > pCup.y - BTN_R * 3) {
-          const lw = pCup.x - pCup.w / 2;   // left wall x
-          const rw = pCup.x + pCup.w / 2;   // right wall x
-          const cupTop  = pCup.y;
-          const cupBot  = pCup.y + pCup.h;
+        // ── Cup physics ───────────────────────────────────────────────────────
+        // pBtn.x/y = center/bottom-tip of chicken (collision point = drumstick tip)
+        // Only engage when chicken tip is actually below the cup rim level
+        if (pCup && !scored) {
+          const lw = pCup.x - pCup.w / 2;
+          const rw = pCup.x + pCup.w / 2;
+          const cupTop = pCup.y;
+          const cupBot = pCup.y + pCup.h;
+          const tipX   = pBtn.x;   // horizontal center
+          const tipY   = pBtn.y;   // bottom tip
 
-          // Helper: push circle off a vertical segment
-          // seg runs from (sx, sy0) to (sx, sy1); side: +1 = ball must stay right, -1 = stay left
-          function bounceVertSeg(sx, sy0, sy1, side) {
-            if (pBtn.y + BTN_R < sy0 || pBtn.y - BTN_R > sy1) return;
-            const pen = BTN_R - side * (pBtn.x - sx);
-            if (pen > 0) {
-              pBtn.x += side * pen;
-              pBtn.vx = side * Math.abs(pBtn.vx) * BOUNCE_DAMP;
-            }
+          // Exterior left wall — only if tip is in cup's height band and chicken is to the LEFT
+          if (tipY > cupTop && tipY < cupBot && tipX < lw && tipX + BTN_R > lw && pBtn.vx > 0) {
+            pBtn.x = lw - BTN_R;
+            pBtn.vx = -Math.abs(pBtn.vx) * BOUNCE_DAMP;
           }
-          // Helper: push circle off a horizontal segment
-          // side: +1 = ball must stay above, -1 = stay below
-          function bounceHorizSeg(sy, sx0, sx1, side) {
-            if (pBtn.x + BTN_R < sx0 || pBtn.x - BTN_R > sx1) return;
-            const pen = BTN_R - side * (pBtn.y - sy);
-            if (pen > 0) {
-              pBtn.y += side * pen;
-              pBtn.vy = side * Math.abs(pBtn.vy) * BOUNCE_DAMP;
-              pBtn.vx *= 0.8;
-              if (Math.abs(pBtn.vy) < 0.8) pBtn.vy = 0;
-              if (Math.abs(pBtn.vx) < 0.2) pBtn.vx = 0;
-            }
+          // Exterior right wall
+          if (tipY > cupTop && tipY < cupBot && tipX > rw && tipX - BTN_R < rw && pBtn.vx < 0) {
+            pBtn.x = rw + BTN_R;
+            pBtn.vx = Math.abs(pBtn.vx) * BOUNCE_DAMP;
+          }
+          // Cup floor — tip went below cupBot while inside x range
+          if (tipX > lw && tipX < rw && tipY > cupBot && pBtn.vy > 0) {
+            pBtn.y = cupBot;
+            pBtn.vy = -Math.abs(pBtn.vy) * BOUNCE_DAMP;
+            pBtn.vx *= 0.8;
+            if (Math.abs(pBtn.vy) < 0.8) pBtn.vy = 0;
+            if (Math.abs(pBtn.vx) < 0.2) pBtn.vx = 0;
           }
 
-          if (!scored) {
-            // Left wall: ball to the left bounces right; ball inside bounces left
-            // Exterior left face (ball left of cup)
-            bounceVertSeg(lw, cupTop, cupBot, +1);
-            // Exterior right face
-            bounceVertSeg(rw, cupTop, cupBot, -1);
-            // Cup floor (horizontal)
-            bounceHorizSeg(cupBot, lw, rw, +1);
-
-            // ── Score check ──────────────────────────────────────────────────
-            // pBtn.y = chicken bottom tip — score when tip enters cup opening
-            const inX = Math.abs(pBtn.x - pCup.x) < (pCup.w / 2 - BTN_R * 0.15);
-            const inY = pBtn.y > cupTop && pBtn.y < cupTop + pCup.h * 0.5;
-            if (!busy && inX && inY && pBtn.vy > 2) {
-              scored = true;
-              pBtn.vx = 0;
-              pBtn.x  = pCup.x;
-              // Bucket in front while chicken is inside
-              document.getElementById('bucketImg').style.zIndex = 22;
-              generate();
-              setTimeout(() => {
-                scored = false;
-                document.getElementById('bucketImg').style.zIndex = 6;
-                pBtn.vy = -(13 + Math.random() * 4);
-                pBtn.vx = (Math.random() - 0.5) * 4;
-              }, 1100);
-            }
-          } else {
-            // Scored: keep ball inside cup until pop-out
-            bounceHorizSeg(cupBot, lw, rw, +1);
-            if (pBtn.x - BTN_R < lw) { pBtn.x = lw + BTN_R; pBtn.vx = Math.abs(pBtn.vx) * 0.5; }
-            if (pBtn.x + BTN_R > rw) { pBtn.x = rw - BTN_R; pBtn.vx = -Math.abs(pBtn.vx) * 0.5; }
+          // ── Score: tip entered through the opening from above ─────────────
+          const inX = tipX > lw && tipX < rw;
+          const inY = tipY > cupTop && tipY < cupTop + pCup.h * 0.5;
+          if (!busy && inX && inY && pBtn.vy > 2) {
+            scored = true;
+            pBtn.vx = 0;
+            pBtn.x  = pCup.x;
+            document.getElementById('bucketImg').style.zIndex = 22;
+            generate();
+            setTimeout(() => {
+              scored = false;
+              document.getElementById('bucketImg').style.zIndex = 6;
+              pBtn.vy = -(13 + Math.random() * 4);
+              pBtn.vx = (Math.random() - 0.5) * 4;
+            }, 1100);
           }
+        }
+
+        // While scored — keep chicken inside cup, let it settle on the floor
+        if (pCup && scored) {
+          const lw = pCup.x - pCup.w / 2;
+          const rw = pCup.x + pCup.w / 2;
+          const cupBot = pCup.y + pCup.h;
+          if (pBtn.y > cupBot && pBtn.vy > 0) {
+            pBtn.y = cupBot;
+            pBtn.vy = -Math.abs(pBtn.vy) * BOUNCE_DAMP;
+            pBtn.vx *= 0.8;
+            if (Math.abs(pBtn.vy) < 0.8) pBtn.vy = 0;
+          }
+          if (pBtn.x < lw + BTN_R) { pBtn.x = lw + BTN_R; pBtn.vx = Math.abs(pBtn.vx) * 0.4; }
+          if (pBtn.x > rw - BTN_R) { pBtn.x = rw - BTN_R; pBtn.vx = -Math.abs(pBtn.vx) * 0.4; }
         }
       }
 
