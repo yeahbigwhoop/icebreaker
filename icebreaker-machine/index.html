@@ -684,7 +684,7 @@
       if (barrierAlpha > 0.005) {
         ctx.save();
         ctx.setLineDash([8, 8]);
-        ctx.strokeStyle = `rgba(255,255,255,${barrierAlpha})`;
+        ctx.strokeStyle = `rgba(0,0,0,${barrierAlpha})`;
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(0, barrierY);
@@ -702,7 +702,7 @@
       if (power < 0.05) return;
 
       ctx.save();
-      ctx.strokeStyle = `rgba(255,255,255,${0.25 + power * 0.45})`;
+      ctx.strokeStyle = `rgba(0,0,0,${0.25 + power * 0.45})`;
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.arc(pBtn.x, pBtn.y, BTN_R + 10 + power * 16,
