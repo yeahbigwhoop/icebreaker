@@ -33,7 +33,8 @@ function callAnthropic(apiKey) {
 - Monday morning energy — nothing too heavy or cognitively demanding
 - Pop culture, topical references, and weird hypotheticals are welcome
 - They're creatives but this is a break from work — avoid anything design/art/work-related
-- Short, punchy questions only — conversational, a little quirky
+- No movie or music questions — predictable and weak
+- Brevity is the mark of a good prompt — fewer words wins every time
 
 Here are some example questions in the right style and tone:
 ${EXAMPLE_PROMPTS.map(p => `- ${p}`).join('\n')}
