@@ -18,7 +18,11 @@ const EXAMPLE_PROMPTS = [
   "What's the most embarrassing thing in your search history?",
 ];
 
-function callAnthropic(apiKey) {
+function callAnthropic(apiKey, recentPrompts = []) {
+  const recentBlock = recentPrompts.length
+    ? `\nThe last ${recentPrompts.length} prompts shown were — do NOT repeat their topics, themes, or structure:\n${recentPrompts.map(p => `- ${p}`).join('\n')}\n`
+    : '';
+
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
@@ -36,7 +40,7 @@ function callAnthropic(apiKey) {
 - No movie or music questions — predictable and weak
 - Brevity is the mark of a good prompt — fewer words wins every time
 - Hard limit: 15 words maximum
-
+${recentBlock}
 Here are some example questions in the right style and tone:
 ${EXAMPLE_PROMPTS.map(p => `- ${p}`).join('\n')}
 
@@ -88,7 +92,9 @@ module.exports = async function(req, res) {
   }
 
   try {
-    const prompt = await callAnthropic(apiKey);
+    const body = req.body || {};
+    const recentPrompts = Array.isArray(body.recentPrompts) ? body.recentPrompts.slice(-6) : [];
+    const prompt = await callAnthropic(apiKey, recentPrompts);
     res.status(200).json({ prompt });
   } catch (e) {
     res.status(500).json({ error: e.message });

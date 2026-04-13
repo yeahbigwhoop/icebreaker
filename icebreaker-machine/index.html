@@ -371,6 +371,11 @@
 
     // ── Prompt queue — shuffled deck, no repeats until all shown ─────────────
     let promptQueue = [];
+    const recentPrompts = []; // last 6 shown, sent to API to avoid theme repeats
+    function trackRecent(text) {
+      recentPrompts.push(text);
+      if (recentPrompts.length > 6) recentPrompts.shift();
+    }
     function nextPrompt() {
       if (promptQueue.length === 0) {
         promptQueue = [...prompts].sort(() => Math.random() - 0.5);
@@ -813,6 +818,7 @@
       }
 
       textEl.textContent = finalText;
+      trackRecent(finalText);
       if (isAI) {
         const dot = document.createElement('span');
         dot.className = 'ai-dot';
@@ -838,7 +844,11 @@
       busy = true;
       startThinking();
       try {
-        const res = await fetch('/api/generate-prompt', { method: 'POST' });
+        const res = await fetch('/api/generate-prompt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ recentPrompts }),
+        });
         if (!res.ok) {
           const txt = await res.text();
           throw new Error(`${res.status}: ${txt}`);
