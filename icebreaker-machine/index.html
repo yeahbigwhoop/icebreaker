@@ -321,6 +321,15 @@
       "What's something you own that's older than you?",
     ];
 
+    // ── Prompt queue — shuffled deck, no repeats until all shown ─────────────
+    let promptQueue = [];
+    function nextPrompt() {
+      if (promptQueue.length === 0) {
+        promptQueue = [...prompts].sort(() => Math.random() - 0.5);
+      }
+      return promptQueue.pop();
+    }
+
     // ── Video background ──────────────────────────────────────────────────────
     const bgVideo = document.getElementById('bgVideo');
 
@@ -781,8 +790,7 @@
         const { prompt } = await res.json();
         await showPrompt(prompt);
       } catch {
-        const index = Math.floor(Math.random() * prompts.length);
-        await showPrompt(prompts[index]);
+        await showPrompt(nextPrompt());
       } finally {
         busy = false;
         stopThinking();
