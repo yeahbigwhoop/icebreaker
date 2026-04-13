@@ -1,5 +1,20 @@
 const https = require('https');
 
+const CATEGORIES = [
+  'childhood / nostalgia',
+  'current habits / daily life',
+  'food & taste',
+  'hypothetical / would you rather',
+  'self-knowledge / personality',
+  'embarrassing moments',
+  'random skills or talents',
+  'technology / phone / internet',
+  'social dynamics / relationships',
+  'local Hawaii life',
+  'weird preferences or opinions',
+  'work history / past jobs',
+];
+
 const EXAMPLE_PROMPTS = [
   "Fun fact no one knows about you?",
   "What do you collect?",
@@ -7,21 +22,20 @@ const EXAMPLE_PROMPTS = [
   "What's on your tombstone?",
   "Silly childhood fear?",
   "What's your most useless skill?",
-  "What movie have you seen the most times?",
-  "What's a hill you'll die on?",
   "What was your first job?",
   "If you could live in any decade, which would it be?",
   "What's the last thing you Googled?",
   "What's something you're irrationally good at?",
-  "What's your go-to karaoke song?",
   "What's a weird food combination you love?",
   "What's the most embarrassing thing in your search history?",
 ];
 
 function callAnthropic(apiKey, recentPrompts = []) {
   const recentBlock = recentPrompts.length
-    ? `\nThe last ${recentPrompts.length} prompts shown were — do NOT repeat their topics, themes, or structure:\n${recentPrompts.map(p => `- ${p}`).join('\n')}\n`
+    ? `\nRECENT PROMPTS — you must pick a completely different category and topic from all of these:\n${recentPrompts.map(p => `- ${p}`).join('\n')}\n`
     : '';
+
+  const categoryList = CATEGORIES.map(c => `- ${c}`).join('\n');
 
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({
@@ -29,22 +43,26 @@ function callAnthropic(apiKey, recentPrompts = []) {
       max_tokens: 60,
       messages: [{
         role: 'user',
-        content: `You generate icebreaker questions for a specific group. Here's who they are:
+        content: `You generate icebreaker questions for a specific team.
 
-- A tight-knit creative team of 6 in Hawaii who have worked together for 5+ years
-- They do these icebreakers every Monday morning, so they've heard a lot — novelty is essential
-- Very casual, good sense of humor, not overly PC, local Hawaiian culture is fair game
-- Monday morning energy — nothing too heavy or cognitively demanding
-- Pop culture, topical references, and weird hypotheticals are welcome
-- They're creatives but this is a break from work — avoid anything design/art/work-related
-- No movie or music questions — predictable and weak
-- Brevity is the mark of a good prompt — fewer words wins every time
-- Hard limit: 15 words maximum
+GROUP CONTEXT:
+- Tight-knit creative team of 6 in Hawaii, 5+ years together
+- Monday morning icebreakers every week — they've heard hundreds, novelty is essential
+- Casual, good humor, not overly PC, local Hawaiian culture fair game
+- Nothing too heavy or cognitively demanding
+- Pop culture, weird hypotheticals welcome
+- No design/art/work questions. No movie or music questions.
+- Hard limit: 15 words maximum. Fewer is better.
+
+TOPIC CATEGORIES to rotate through:
+${categoryList}
 ${recentBlock}
-Here are some example questions in the right style and tone:
+Choose a category NOT represented in the recent prompts above, then write one question in that category.
+
+Example questions:
 ${EXAMPLE_PROMPTS.map(p => `- ${p}`).join('\n')}
 
-Generate ONE new icebreaker question that feels fresh to a group that has heard hundreds of these. Respond with only the question, nothing else.`
+Respond with only the question. No category label, no explanation.`
       }]
     });
 
