@@ -60,20 +60,20 @@
     .prompt-text.visible { opacity: 1; }
     .prompt-text:hover { opacity: 0.7; }
 
-    /* Subtle AI indicator — tiny pulsing dot when prompt is AI-generated */
+    /* AI indicator dot — pulsing when prompt is AI-generated */
     .ai-dot {
       display: inline-block;
-      width: 5px;
-      height: 5px;
+      width: 9px;
+      height: 9px;
       border-radius: 50%;
-      background: rgba(255,255,255,0.4);
-      margin-left: 10px;
+      background: rgba(255,255,255,0.9);
+      margin-left: 14px;
       vertical-align: middle;
-      animation: ai-pulse 2.5s ease-in-out infinite;
+      animation: ai-pulse 2s ease-in-out infinite;
     }
     @keyframes ai-pulse {
-      0%, 100% { opacity: 0.2; transform: scale(1); }
-      50%       { opacity: 0.6; transform: scale(1.3); }
+      0%, 100% { opacity: 0.4; transform: scale(1); }
+      50%       { opacity: 1;   transform: scale(1.5); }
     }
 
     .copied-hint {

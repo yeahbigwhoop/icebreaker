@@ -25,7 +25,20 @@ function callAnthropic(apiKey) {
       max_tokens: 60,
       messages: [{
         role: 'user',
-        content: `You generate icebreaker questions for groups. Here are some examples of the style and tone:\n\n${EXAMPLE_PROMPTS.map(p => `- ${p}`).join('\n')}\n\nGenerate ONE new icebreaker question in the same style: short, conversational, a little quirky. Respond with only the question, nothing else.`
+        content: `You generate icebreaker questions for a specific group. Here's who they are:
+
+- A tight-knit creative team of 6 in Hawaii who have worked together for 5+ years
+- They do these icebreakers every Monday morning, so they've heard a lot — novelty is essential
+- Very casual, good sense of humor, not overly PC, local Hawaiian culture is fair game
+- Monday morning energy — nothing too heavy or cognitively demanding
+- Pop culture, topical references, and weird hypotheticals are welcome
+- They're creatives but this is a break from work — avoid anything design/art/work-related
+- Short, punchy questions only — conversational, a little quirky
+
+Here are some example questions in the right style and tone:
+${EXAMPLE_PROMPTS.map(p => `- ${p}`).join('\n')}
+
+Generate ONE new icebreaker question that feels fresh to a group that has heard hundreds of these. Respond with only the question, nothing else.`
       }]
     });
 
