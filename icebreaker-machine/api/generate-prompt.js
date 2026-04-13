@@ -35,6 +35,7 @@ function callAnthropic(apiKey) {
 - They're creatives but this is a break from work — avoid anything design/art/work-related
 - No movie or music questions — predictable and weak
 - Brevity is the mark of a good prompt — fewer words wins every time
+- Hard limit: 15 words maximum
 
 Here are some example questions in the right style and tone:
 ${EXAMPLE_PROMPTS.map(p => `- ${p}`).join('\n')}

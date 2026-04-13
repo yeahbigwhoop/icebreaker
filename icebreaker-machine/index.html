@@ -32,6 +32,14 @@
       object-fit: cover;
       display: block;
     }
+    /* White overlay for legibility */
+    .art-wrap::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0.3);
+      pointer-events: none;
+    }
 
     /* Prompt text — top-left, mix-blend-mode difference, no background */
     #promptInner {
