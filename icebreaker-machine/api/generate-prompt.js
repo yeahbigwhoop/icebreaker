@@ -48,7 +48,7 @@ function callAnthropic(apiKey) {
         try {
           const parsed = JSON.parse(data);
           const text = parsed.content?.[0]?.text?.trim();
-          if (!text) throw new Error('No text in response');
+          if (!text) throw new Error('No text in response: ' + JSON.stringify(parsed));
           resolve(text);
         } catch (e) {
           reject(e);
