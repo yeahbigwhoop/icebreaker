@@ -807,10 +807,14 @@
       startThinking();
       try {
         const res = await fetch('/api/generate-prompt', { method: 'POST' });
-        if (!res.ok) throw new Error();
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(`${res.status}: ${txt}`);
+        }
         const { prompt } = await res.json();
         await showPrompt(prompt, true);
-      } catch {
+      } catch (err) {
+        console.error('[icebreaker] API failed, using static list:', err);
         await showPrompt(nextPrompt());
       } finally {
         busy = false;
