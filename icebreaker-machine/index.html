@@ -14,58 +14,57 @@
       background: #f5f1ea;
     }
 
-    /* Video frame — full viewport, behind everything */
-    .art-wrap {
+    /* Tile collage layer */
+    #tileLayer {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      opacity: 0;
-      overflow: hidden;
-      transition: opacity 1.2s ease;
-      z-index: 1;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
     }
-    .art-wrap.visible { opacity: 1; }
-    #bgVideo {
+    .tile-wrap {
+      position: absolute;
+      will-change: transform;
+    }
+    .tile {
+      border-radius: 5px;
+      overflow: hidden;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.12);
+    }
+    .tile img,
+    .tile video {
       width: 100%; height: 100%;
       object-fit: cover;
       display: block;
     }
-    /* White overlay for legibility */
-    .art-wrap::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: rgba(255,255,255,0.6);
-      pointer-events: none;
-    }
 
-    /* Prompt text — top-left, no background */
+    /* Prompt text — centered, layered between tile depths */
     #promptInner {
       position: fixed;
-      top: 24px;
-      left: 24px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
       pointer-events: none;
       z-index: 15;
-      max-width: 55vw;
+      max-width: 68vw;
+      text-align: center;
     }
 
     .prompt-text {
       font-family: 'DM Sans', sans-serif;
-      font-size: 90px;
+      font-size: 82px;
       font-weight: 400;
       color: #111;
-      text-align: left;
+      text-align: center;
       line-height: 1.15;
       letter-spacing: -0.02em;
       opacity: 0;
       transition: opacity 1s ease 0.3s;
       pointer-events: all;
       cursor: pointer;
+      text-shadow: 0 1px 4px rgba(255,255,255,0.85), 0 0 20px rgba(255,255,255,0.6);
     }
     .prompt-text.visible { opacity: 1; }
-    .prompt-text:hover { opacity: 0.7; }
+    .prompt-text:hover { opacity: 0.75; }
 
     /* AI indicator dot — pulsing when prompt is AI-generated */
     .ai-dot {
@@ -163,11 +162,9 @@
 </head>
 <body>
 
-  <div class="art-wrap" id="artWrap">
-    <video id="bgVideo" autoplay muted loop playsinline></video>
-  </div>
+  <div id="tileLayer"></div>
 
-<div id="promptInner" style="background:none;backdrop-filter:none;-webkit-backdrop-filter:none;padding:0">
+  <div id="promptInner" style="background:none;backdrop-filter:none;-webkit-backdrop-filter:none;padding:0">
     <div class="prompt-text" id="promptText" title="click to copy"></div>
     <div class="copied-hint" id="copiedHint">copied</div>
   </div>
@@ -383,10 +380,7 @@
       return promptQueue.pop();
     }
 
-    // ── Video background ──────────────────────────────────────────────────────
-    const bgVideo = document.getElementById('bgVideo');
-
-
+    // ── Video loader ──────────────────────────────────────────────────────────
     async function loadVideo() {
       try {
         const res = await fetch('/api/random-video');
@@ -395,6 +389,123 @@
         return url;
       } catch { return null; }
     }
+
+    // ── Tile collage ──────────────────────────────────────────────────────────
+    // [top%, left%, w_px, h_px, rot_deg, depth(1-4), type]
+    // depth z-index: 1→3, 2→8, 3→12, 4→18  (prompt sits at z=15, so depth 4 is in front)
+    const TILE_DEFS = [
+      [3,   2,  280, 280,  -3, 1, 'image'],
+      [5,  27,  185, 245,   4, 3, 'image'],
+      [2,  51,  205, 205,  -2, 2, 'gif'  ],
+      [4,  74,  165, 195,   5, 4, 'image'],
+      [30,  2,  325, 245,   2, 4, 'video'],
+      [31, 39,  200, 200,  -4, 2, 'image'],
+      [25, 63,  255, 305,   1, 3, 'video'],
+      [55, 10,  225, 178,  -2, 1, 'image'],
+      [53, 47,  242, 242,   3, 2, 'image'],
+      [50, 74,  172, 208,  -3, 3, 'image'],
+    ];
+    const DEPTH_Z      = { 1: 3,  2: 8,  3: 12, 4: 18 };
+    const DEPTH_FACTOR = { 1: 8,  2: 16, 3: 26, 4: 40 }; // max parallax px
+
+    // Curated GIFs — falls back to picsum if any fail
+    const GIFS = [
+      'https://media.giphy.com/media/26BRv0ThflsHCqDrG/giphy.gif',
+      'https://media.giphy.com/media/l0HlBO7eyXzSZkJri/giphy.gif',
+      'https://media.giphy.com/media/xT9IgG50Lg7rusRgqY/giphy.gif',
+      'https://media.giphy.com/media/3o7TKTDn976rzVgky4/giphy.gif',
+    ];
+
+    const videoTiles = [];
+    const tileEls    = [];
+
+    function buildTiles() {
+      const layer   = document.getElementById('tileLayer');
+      let   imgSeed = 1;
+
+      TILE_DEFS.forEach(([topPct, leftPct, w, h, rot, depth, type], i) => {
+        const wrap = document.createElement('div');
+        wrap.className   = 'tile-wrap';
+        wrap.dataset.depth = depth;
+        wrap.dataset.rot   = rot;
+        Object.assign(wrap.style, {
+          top:       topPct + '%',
+          left:      leftPct + '%',
+          width:     w + 'px',
+          height:    h + 'px',
+          zIndex:    DEPTH_Z[depth],
+          opacity:   '0',
+          transform: `rotate(${rot}deg) scale(0.15)`,
+        });
+
+        const tile = document.createElement('div');
+        tile.className = 'tile';
+        Object.assign(tile.style, { width: w + 'px', height: h + 'px' });
+
+        if (type === 'video') {
+          const vid = document.createElement('video');
+          vid.autoplay  = true;
+          vid.muted     = true;
+          vid.loop      = true;
+          vid.playsInline = true;
+          Object.assign(vid.style, { width:'100%', height:'100%', objectFit:'cover', display:'block' });
+          loadVideo().then(url => { if (url) { vid.src = url; vid.load(); } });
+          tile.appendChild(vid);
+          videoTiles.push(vid);
+        } else if (type === 'gif') {
+          const img = document.createElement('img');
+          Object.assign(img.style, { width:'100%', height:'100%', objectFit:'cover', display:'block' });
+          img.src = GIFS[Math.floor(Math.random() * GIFS.length)];
+          img.onerror = () => { img.src = `https://picsum.photos/${w}/${h}?random=99`; };
+          tile.appendChild(img);
+        } else {
+          const img = document.createElement('img');
+          Object.assign(img.style, { width:'100%', height:'100%', objectFit:'cover', display:'block' });
+          img.src = `https://picsum.photos/${w}/${h}?random=${imgSeed++}`;
+          tile.appendChild(img);
+        }
+
+        wrap.appendChild(tile);
+        layer.appendChild(wrap);
+        tileEls.push(wrap);
+
+        // Staggered explosion entrance
+        setTimeout(() => {
+          wrap.style.transition = `transform 0.95s cubic-bezier(0.34,1.56,0.64,1), opacity 0.45s ease`;
+          wrap.style.transform  = `rotate(${rot}deg) scale(1)`;
+          wrap.style.opacity    = '1';
+        }, 80 + i * 90);
+      });
+
+      // Enable parallax after entrance finishes
+      setTimeout(startParallax, 80 + TILE_DEFS.length * 90 + 500);
+    }
+
+    // ── Parallax ──────────────────────────────────────────────────────────────
+    const parallaxTarget  = { x: 0, y: 0 };
+    const parallaxCurrent = { x: 0, y: 0 };
+    let   parallaxRaf     = null;
+
+    function startParallax() {
+      if (!parallaxRaf) parallaxTick();
+    }
+    function parallaxTick() {
+      parallaxCurrent.x += (parallaxTarget.x - parallaxCurrent.x) * 0.055;
+      parallaxCurrent.y += (parallaxTarget.y - parallaxCurrent.y) * 0.055;
+      tileEls.forEach(el => {
+        const factor = DEPTH_FACTOR[el.dataset.depth];
+        const px = parallaxCurrent.x * factor;
+        const py = parallaxCurrent.y * factor;
+        el.style.transform = `rotate(${el.dataset.rot}deg) translate(${px}px,${py}px)`;
+      });
+      parallaxRaf = requestAnimationFrame(parallaxTick);
+    }
+    document.addEventListener('mousemove', e => {
+      parallaxTarget.x = e.clientX / window.innerWidth  - 0.5;
+      parallaxTarget.y = e.clientY / window.innerHeight - 0.5;
+    });
+
+    buildTiles();
 
 
 
@@ -800,13 +911,12 @@
 
     async function showPrompt(finalText, isAI = false) {
       const textEl = document.getElementById('promptText');
-      const artWrap = document.getElementById('artWrap');
 
-      artWrap.classList.remove('visible');
       textEl.classList.remove('visible');
 
+      // Fetch new video in background; rotate which tile gets it each score
       const videoPromise = loadVideo();
-      await new Promise(r => setTimeout(r, 350));
+      await new Promise(r => setTimeout(r, 280));
 
       // Shuffle phase
       textEl.style.transition = 'none';
@@ -824,18 +934,18 @@
         dot.className = 'ai-dot';
         textEl.appendChild(dot);
       }
-      // Font stays as the default DM Sans (same as shuffle) — no applyStyle() call
       textEl.style.transition = '';
       textEl.style.opacity = '';
 
+      // Swap one video tile to new footage
       const url = await videoPromise;
-      if (url) {
-        bgVideo.src = url;
-        bgVideo.load();
-        bgVideo.oncanplay = () => { bgVideo.playbackRate = 0.7; };
+      if (url && videoTiles.length > 0) {
+        const vid = videoTiles[scoreCount % videoTiles.length];
+        vid.src = url;
+        vid.load();
+        vid.play().catch(() => {});
       }
-      void artWrap.offsetHeight;
-      artWrap.classList.add('visible');
+
       textEl.classList.add('visible');
     }
 
