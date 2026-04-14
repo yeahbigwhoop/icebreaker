@@ -481,22 +481,54 @@
       setTimeout(startParallax, 80 + TILE_DEFS.length * 90 + 500);
     }
 
-    // ── Parallax ──────────────────────────────────────────────────────────────
+    // ── Parallax + autonomous float ───────────────────────────────────────────
     const parallaxTarget  = { x: 0, y: 0 };
     const parallaxCurrent = { x: 0, y: 0 };
     let   parallaxRaf     = null;
+    const floatStart      = performance.now();
+
+    // Each tile gets its own float personality
+    const floatParams = [];
+
+    function initFloatParams() {
+      tileEls.forEach(() => {
+        floatParams.push({
+          // x/y drift: different speeds and phase offsets per tile
+          xSpeed:  0.00028 + Math.random() * 0.00022,
+          ySpeed:  0.00021 + Math.random() * 0.00025,
+          xPhase:  Math.random() * Math.PI * 2,
+          yPhase:  Math.random() * Math.PI * 2,
+          xAmp:    10 + Math.random() * 14,   // px range
+          yAmp:    8  + Math.random() * 12,
+          // slow rotation sway
+          rotSpeed: 0.00012 + Math.random() * 0.0001,
+          rotPhase: Math.random() * Math.PI * 2,
+          rotAmp:   0.8 + Math.random() * 1.2, // deg range
+        });
+      });
+    }
 
     function startParallax() {
+      initFloatParams();
       if (!parallaxRaf) parallaxTick();
     }
     function parallaxTick() {
       parallaxCurrent.x += (parallaxTarget.x - parallaxCurrent.x) * 0.055;
       parallaxCurrent.y += (parallaxTarget.y - parallaxCurrent.y) * 0.055;
-      tileEls.forEach(el => {
+
+      const t = performance.now() - floatStart;
+
+      tileEls.forEach((el, i) => {
         const factor = DEPTH_FACTOR[el.dataset.depth];
         const px = parallaxCurrent.x * factor;
         const py = parallaxCurrent.y * factor;
-        el.style.transform = `rotate(${el.dataset.rot}deg) translate(${px}px,${py}px)`;
+
+        const fp  = floatParams[i];
+        const fx  = Math.sin(t * fp.xSpeed + fp.xPhase) * fp.xAmp;
+        const fy  = Math.cos(t * fp.ySpeed + fp.yPhase) * fp.yAmp;
+        const rot = parseFloat(el.dataset.rot) + Math.sin(t * fp.rotSpeed + fp.rotPhase) * fp.rotAmp;
+
+        el.style.transform = `rotate(${rot}deg) translate(${px + fx}px, ${py + fy}px)`;
       });
       parallaxRaf = requestAnimationFrame(parallaxTick);
     }
