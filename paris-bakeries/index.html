@@ -139,6 +139,67 @@
     .popup-hours { font-size: 11px; color: var(--gold); margin-top: 3px; }
     .popup-dist { font-size: 12px; color: var(--gold); margin-top: 4px; }
     .popup-addr { font-size: 11px; color: rgba(245,240,232,0.35); margin-top: 2px; }
+
+    /* Story mode */
+    #story-overlay {
+      position: fixed; inset: 0; z-index: 3000;
+      background: #0e0a04;
+      display: flex; flex-direction: column;
+      opacity: 0; pointer-events: none; transition: opacity 0.25s;
+    }
+    #story-overlay.active { opacity: 1; pointer-events: all; }
+
+    #story-img-wrap {
+      flex: 1; position: relative; overflow: hidden;
+    }
+    #story-img {
+      width: 100%; height: 100%; object-fit: cover;
+      display: block; transition: opacity 0.3s;
+    }
+    #story-no-img {
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 80px; background: radial-gradient(ellipse at 50% 40%, #2a1a05, #0e0a04);
+    }
+    #story-progress {
+      position: absolute; top: max(14px, env(safe-area-inset-top)); left: 16px; right: 16px;
+      display: flex; gap: 4px;
+    }
+    #story-progress span {
+      flex: 1; height: 2px; border-radius: 1px;
+      background: rgba(201,168,76,0.25);
+      transition: background 0.2s;
+    }
+    #story-progress span.done { background: var(--gold); }
+
+    #story-close {
+      position: absolute; top: max(14px, env(safe-area-inset-top)); right: 14px;
+      background: rgba(0,0,0,0.45); color: var(--cream); border: none;
+      border-radius: 50%; width: 32px; height: 32px; font-size: 16px;
+      cursor: pointer; z-index: 10; display: flex; align-items: center; justify-content: center;
+    }
+
+    #story-info {
+      padding: 18px 18px max(22px, calc(env(safe-area-inset-bottom) + 14px));
+      background: linear-gradient(transparent, #0e0a04 20%);
+      position: absolute; bottom: 0; left: 0; right: 0;
+    }
+    #story-icon  { font-size: 22px; margin-bottom: 4px; }
+    #story-name  { font-size: 22px; font-weight: 700; color: var(--cream); margin-bottom: 6px; }
+    #story-note  { font-size: 13px; color: rgba(245,240,232,0.65); line-height: 1.45; margin-bottom: 8px; }
+    #story-meta  { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 12px; }
+    #story-map-btn {
+      background: var(--gold); color: var(--bg); border: none;
+      border-radius: 20px; padding: 9px 20px; font-size: 13px; font-weight: 700;
+      cursor: pointer;
+    }
+
+    .story-nav {
+      position: absolute; top: 0; bottom: 0; width: 44%;
+      background: transparent; border: none; cursor: pointer; z-index: 5;
+    }
+    #story-prev { left: 0; }
+    #story-next { right: 0; }
   </style>
 </head>
 <body>
@@ -192,6 +253,7 @@
   <div class="header-right">
     <button id="weather-pill" class="pill" onclick="toggleWxPanel()">--°F</button>
     <button id="locate-btn" class="pill" onclick="locateMe()">📍 Find Me</button>
+    <button class="pill" id="story-btn" onclick="openStory()" style="background:rgba(201,168,76,0.12);color:var(--gold);border:1px solid rgba(201,168,76,0.3);">▶ Story</button>
   </div>
 </header>
 
@@ -235,11 +297,11 @@ const AIRBNB = { lat: 48.8692, lon: 2.3444, addr: "8 Rue Saint-Marc, 75002" };
 const WIKI = {
   // Bakeries — local assets + Wikipedia fallback for Éric Kayser
   "Du Pain et des Idées":          "local:assets/du pain et des idées.png",
-  "Mamiche":                       "local:assets/Mamiche.png",
+  "Mamiche":                       ["local:assets/Mamiche.png", "local:assets/Mamiche 2 .png"],
   "Bo&Mie":                        "local:assets/Bo&Mie.png",
   "Maison Landemaine":             "local:assets/Maison Landemaine.png",
   "Gontran Cherrier":              "local:assets/gontran cherrier.png",
-  "Le Grenier à Pain":             "local:assets/le grenier à pain.png",
+  "Le Grenier à Pain":             ["local:assets/le grenier à pain.png", "local:assets/le grenier à pain 2.png"],
   "Éric Kayser":                   "Éric Kayser",
   "Blé Sucré":                     "local:assets/Ble Sucre.png",
   "Terroirs d'Avenir":             "local:assets/Boulangerie Terroir d'Avenir.png",
@@ -296,6 +358,15 @@ const WIKI = {
   "Parc de la Muette":         "Parc de la Muette",
   "Jardin de Reuilly":         "Jardin de Reuilly",
 };
+
+function wikiFirst(name) {
+  const v = WIKI[name];
+  return Array.isArray(v) ? v[0] : (v || '');
+}
+function wikiAll(name) {
+  const v = WIKI[name];
+  return Array.isArray(v) ? v : (v ? [v] : []);
+}
 
 // Data format: icon, name, note, addr, lat, lon
 //   off: day-of-week numbers that are closed (0=Sun, 1=Mon … 6=Sat)
@@ -502,11 +573,11 @@ function plotMarkers() {
 function popupHTML(b) {
   const open = isOpenNow(b);
   const badge = open === true ? '<span style="color:#6fcf97;font-size:11px"> · Open now</span>' : open === false ? '<span style="color:#e07070;font-size:11px"> · Closed</span>' : '';
-  const wikiTitle = WIKI[b.name] || '';
+  const wikiTitle = wikiFirst(b.name);
   const cached = wikiTitle ? wikiCache.get(wikiTitle) : null;
   const thumbHtml = cached
     ? `<img src="${cached.src}" style="width:100%;border-radius:7px;margin-bottom:7px;display:block;max-height:100px;object-fit:cover;">`
-    : wikiTitle ? `<div class="popup-thumb-load" data-wiki="${wikiTitle}"></div>` : '';
+    : wikiTitle ? `<div class="popup-thumb-load" data-name="${b.name}" data-wiki="${wikiTitle}"></div>` : '';
   return `${thumbHtml}<div class="popup-name">${b.icon||'📍'} ${b.name}${badge}</div>
     ${b.note ? `<div class="popup-note">${b.note}</div>` : ''}
     ${b.hours ? `<div class="popup-hours">🕐 ${b.hours}</div>` : ''}
@@ -561,7 +632,7 @@ function renderList() {
         : `<span class="soldout-badge">· may be sold out</span>`
       : '';
     const distStr = b.dist != null ? fmtDist(b.dist) : '';
-    const wikiTitle = WIKI[b.name] || '';
+    const wikiTitle = wikiFirst(b.name);
     return `<div class="item-card ${nearby?'nearby':''} ${closedClass}" data-key="${b.lat},${b.lon}" onclick="selectCard(this,${b.lat},${b.lon})">
       <div class="item-icon${wikiTitle?' thumbable':''}"${wikiTitle?` data-wiki="${wikiTitle}"`:''}>${b.icon||'📍'}</div>
       <div class="item-info">
@@ -617,7 +688,7 @@ function showOsmParks() {
   const curatedNames = new Set(PARKS.map(p => p.name));
   STATIC_PARKS.forEach(p => {
     if (curatedNames.has(p.name)) return;
-    const wikiTitle = WIKI[p.name] || '';
+    const wikiTitle = wikiFirst(p.name);
     const thumbHtml = wikiTitle ? `<div class="popup-thumb-load" data-wiki="${wikiTitle}"></div>` : '';
     const m = L.circleMarker([p.lat, p.lon], {
       radius: 6, color: '#5a9e5a',
@@ -808,7 +879,7 @@ async function fetchThumb(title) {
   try {
     // Local asset — no network call needed
     if (title.startsWith('local:')) {
-      return { src: title.slice(6), pageUrl: '' };
+      return { src: encodeURI(title.slice(6)), pageUrl: '' };
     }
     // French or English Wikipedia
     const lang = title.startsWith('fr:') ? 'fr' : 'en';
@@ -884,20 +955,156 @@ window.addEventListener('online',  () => showStatus('📶 Back online', 3000));
 map.on('popupopen', e => {
   const el = e.popup.getElement()?.querySelector('.popup-thumb-load');
   if (!el) return;
+  const name = el.dataset.name || '';
   const title = el.dataset.wiki;
-  fetchThumb(title).then(result => {
-    if (!result) { el.remove(); return; }
-    wikiCache.set(title, result);
-    const img = document.createElement('img');
-    img.style.cssText = 'width:100%;border-radius:7px;margin-bottom:7px;display:block;max-height:100px;object-fit:cover;opacity:0;transition:opacity 0.35s;';
-    img.onload = () => {
-      el.replaceWith(img);
-      requestAnimationFrame(() => { img.style.opacity = '1'; });
-      if (e.popup.isOpen()) e.popup.update();
-    };
-    img.src = result.src;
+  const allTitles = name ? wikiAll(name) : (title ? [title] : []);
+  if (!allTitles.length) return;
+
+  Promise.all(allTitles.map(t => fetchThumb(t))).then(results => {
+    const valid = results.filter(Boolean);
+    if (!valid.length) { el.remove(); return; }
+
+    if (valid.length === 1) {
+      // Single image — existing fade-in behaviour
+      wikiCache.set(allTitles[0], valid[0]);
+      const img = document.createElement('img');
+      img.style.cssText = 'width:100%;border-radius:7px;margin-bottom:7px;display:block;max-height:110px;object-fit:cover;opacity:0;transition:opacity 0.35s;';
+      img.onload = () => {
+        el.replaceWith(img);
+        requestAnimationFrame(() => { img.style.opacity = '1'; });
+        if (e.popup.isOpen()) e.popup.update();
+      };
+      img.src = valid[0].src;
+      return;
+    }
+
+    // Multi-image carousel
+    let idx = 0;
+    const container = document.createElement('div');
+    container.style.cssText = 'margin-bottom:7px;';
+
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative;width:100%;border-radius:7px;overflow:hidden;touch-action:pan-y;';
+
+    const imgEl = document.createElement('img');
+    imgEl.style.cssText = 'width:100%;display:block;max-height:110px;object-fit:cover;transition:opacity 0.2s;';
+
+    const dotsEl = document.createElement('div');
+    dotsEl.style.cssText = 'display:flex;justify-content:center;gap:5px;padding-top:5px;';
+
+    function setSlide(i, instant) {
+      idx = (i + valid.length) % valid.length;
+      if (!instant) imgEl.style.opacity = '0';
+      imgEl.src = valid[idx].src;
+      imgEl.onload = () => {
+        imgEl.style.opacity = '1';
+        if (e.popup.isOpen()) e.popup.update();
+      };
+      dotsEl.innerHTML = valid.map((_, j) =>
+        `<span style="width:6px;height:6px;border-radius:50%;background:${j===idx?'#c9a84c':'rgba(201,168,76,0.3)'};display:inline-block;cursor:pointer;" onclick="event.stopPropagation()"></span>`
+      ).join('');
+      // Make dots clickable
+      dotsEl.querySelectorAll('span').forEach((s, j) => s.addEventListener('click', ev => { ev.stopPropagation(); setSlide(j, false); }));
+    }
+
+    // Touch swipe
+    let startX = 0;
+    wrap.addEventListener('touchstart', ev => { startX = ev.touches[0].clientX; }, {passive:true});
+    wrap.addEventListener('touchend', ev => {
+      const dx = ev.changedTouches[0].clientX - startX;
+      if (Math.abs(dx) < 30) return;
+      setSlide(idx + (dx < 0 ? 1 : -1), false);
+    });
+
+    wrap.appendChild(imgEl);
+    container.appendChild(wrap);
+    container.appendChild(dotsEl);
+    el.replaceWith(container);
+    setSlide(0, true);
   });
 });
+
+// ── Story mode ────────────────────────────────────────────────────────────────
+let storyItems = [], storyIdx = 0;
+
+function openStory() {
+  // Use bakeries in current tab (or all if 'all')
+  const items = getDisplayItems().filter(b => b.cat === 'bakery' || activeCategory === 'bakery' || (activeCategory === 'all' && b.cat === 'bakery'));
+  storyItems = items.length ? items : getDisplayItems();
+  storyIdx = 0;
+  document.getElementById('story-overlay').classList.add('active');
+  renderStorySlide();
+  // Touch swipe for advancing bakeries
+  const overlay = document.getElementById('story-overlay');
+  overlay._touchX = 0;
+}
+
+function closeStory() {
+  document.getElementById('story-overlay').classList.remove('active');
+}
+
+function storyNav(dir) {
+  storyIdx = (storyIdx + dir + storyItems.length) % storyItems.length;
+  renderStorySlide();
+}
+
+function goStoryOnMap() {
+  const b = storyItems[storyIdx];
+  if (!b) return;
+  closeStory();
+  selectCard(
+    document.querySelector(`[data-key="${b.lat},${b.lon}"]`) || document.createElement('div'),
+    b.lat, b.lon
+  );
+}
+
+function renderStorySlide() {
+  const b = storyItems[storyIdx];
+  if (!b) return;
+
+  // Progress dots
+  const prog = document.getElementById('story-progress');
+  prog.innerHTML = storyItems.map((_, i) => `<span class="${i < storyIdx ? 'done' : ''}"></span>`).join('');
+
+  // Icon + text
+  document.getElementById('story-icon').textContent = b.icon || '🥐';
+  document.getElementById('story-name').textContent = b.name;
+  document.getElementById('story-note').textContent = b.note || '';
+
+  // Status badge
+  const open = isOpenNow(b);
+  const metaEl = document.getElementById('story-meta');
+  metaEl.innerHTML = open === true
+    ? `<span style="color:var(--green);font-weight:700">● Open now</span>`
+    : open === false
+    ? `<span style="color:var(--red);font-weight:700">● Closed</span>`
+    : '';
+  if (b.hours) metaEl.innerHTML += `<span style="color:rgba(245,240,232,0.45)">${b.hours}</span>`;
+
+  // Image
+  const imgEl = document.getElementById('story-img');
+  const noimgEl = document.getElementById('story-no-img');
+  const images = wikiAll(b.name);
+  if (images.length) {
+    fetchThumb(images[0]).then(result => {
+      if (result) {
+        imgEl.style.opacity = '0';
+        imgEl.style.display = 'block';
+        noimgEl.style.display = 'none';
+        imgEl.onload = () => { imgEl.style.opacity = '1'; };
+        imgEl.src = result.src;
+      } else {
+        imgEl.style.display = 'none';
+        noimgEl.style.display = 'flex';
+        noimgEl.textContent = b.icon || '🥐';
+      }
+    });
+  } else {
+    imgEl.style.display = 'none';
+    noimgEl.style.display = 'flex';
+    noimgEl.textContent = b.icon || '🥐';
+  }
+}
 
 plotAirbnb();
 plotMarkers();
@@ -905,5 +1112,23 @@ renderList();
 initDayBanner();
 fetchWeather();
 </script>
+
+<div id="story-overlay">
+  <div id="story-progress"></div>
+  <button id="story-close" onclick="closeStory()">✕</button>
+  <div id="story-img-wrap">
+    <img id="story-img" alt="" />
+    <div id="story-no-img"></div>
+  </div>
+  <div id="story-info">
+    <div id="story-icon"></div>
+    <div id="story-name"></div>
+    <div id="story-note"></div>
+    <div id="story-meta"></div>
+    <button id="story-map-btn" onclick="goStoryOnMap()">View on map ›</button>
+  </div>
+  <button class="story-nav" id="story-prev" onclick="storyNav(-1)"></button>
+  <button class="story-nav" id="story-next" onclick="storyNav(1)"></button>
+</div>
 </body>
 </html>
