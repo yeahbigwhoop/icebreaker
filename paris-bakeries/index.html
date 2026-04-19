@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Paris" />
+  <title>Paris Guide</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --cream: #f5f0e8; --gold: #c9a84c; --warm: #8b5e3c; --bg: #1a1108;
+      --surface: rgba(255,255,255,0.04); --border: rgba(201,168,76,0.14);
+      --green: #6fcf97; --red: #e07070;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--cream); height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+
+    header { padding: 10px 14px; padding-top: max(10px, env(safe-area-inset-top)); background: var(--bg); display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(201,168,76,0.18); flex-shrink: 0; gap: 10px; }
+    .logo { font-size: 16px; font-weight: 700; color: var(--gold); white-space: nowrap; }
+    .logo span { color: var(--cream); font-weight: 400; }
+    .header-right { display: flex; gap: 8px; align-items: center; }
+    .pill { border: none; border-radius: 20px; padding: 7px 13px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    #locate-btn { background: var(--gold); color: var(--bg); }
+    #locate-btn.locating { background: var(--warm); color: var(--cream); }
+
+    /* Weather pill */
+    #weather-pill { background: rgba(255,255,255,0.07); color: rgba(245,240,232,0.8); border: 1px solid rgba(255,255,255,0.1); font-size: 13px; min-width: 72px; }
+    #weather-pill.rain  { border-color: rgba(100,160,255,0.4); color: #a8c8ff; background: rgba(100,160,255,0.08); }
+    #weather-pill.storm { border-color: rgba(255,140,50,0.5);  color: #ffbb77; background: rgba(255,140,50,0.1); }
+
+    /* Weather panel */
+    #wx-overlay { position: fixed; inset: 0; z-index: 1999; display: none; }
+    #wx-overlay.open { display: block; }
+    #wx-panel {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 2000;
+      background: #1f1509; border-top: 1px solid rgba(201,168,76,0.3);
+      border-radius: 16px 16px 0 0; padding: 20px 18px 36px;
+      transform: translateY(100%); transition: transform 0.28s ease;
+    }
+    #wx-panel.open { transform: translateY(0); }
+    .wx-row { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; }
+    .wx-left-emoji { font-size: 48px; line-height: 1; }
+    .wx-desc { font-size: 14px; color: rgba(245,240,232,0.55); margin-top: 6px; }
+    .wx-right { text-align: right; }
+    .wx-temp { font-size: 44px; font-weight: 300; color: var(--cream); line-height: 1; }
+    .wx-range { font-size: 12px; color: rgba(245,240,232,0.4); margin-top: 6px; }
+    .wx-precip { font-size: 12px; color: rgba(245,240,232,0.4); margin-top: 2px; }
+    .wx-divider { border: none; border-top: 1px solid rgba(201,168,76,0.15); margin: 14px 0; }
+    .wx-metro-link { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: rgba(201,168,76,0.08); border: 1px solid rgba(201,168,76,0.2); border-radius: 10px; text-decoration: none; color: var(--gold); font-size: 14px; font-weight: 600; }
+    .wx-metro-sub { font-size: 11px; color: rgba(245,240,232,0.35); font-weight: 400; margin-top: 2px; }
+    .wx-close { display: block; text-align: center; margin-top: 14px; background: none; border: none; color: rgba(245,240,232,0.3); font-size: 13px; cursor: pointer; width: 100%; padding: 4px; }
+    .wx-forecast { display: flex; gap: 8px; margin-bottom: 14px; }
+    .wx-day-card { flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(201,168,76,0.12); border-radius: 9px; padding: 10px 8px; text-align: center; }
+    .wx-day-label { font-size: 10px; color: rgba(245,240,232,0.35); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+    .wx-day-emoji { font-size: 24px; line-height: 1; margin-bottom: 5px; }
+    .wx-day-temp { font-size: 12px; font-weight: 600; color: var(--cream); }
+    .wx-day-rain { font-size: 10px; color: rgba(245,240,232,0.3); margin-top: 3px; }
+
+    /* Day banner */
+    #day-banner { background: rgba(224,112,112,0.12); border-bottom: 1px solid rgba(224,112,112,0.25); padding: 7px 14px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; gap: 10px; }
+    #day-banner.hidden { display: none; }
+    #day-banner.mild { background: rgba(201,168,76,0.08); border-bottom-color: rgba(201,168,76,0.2); }
+    .banner-text { font-size: 12px; color: rgba(245,240,232,0.7); line-height: 1.4; }
+    .banner-text strong { color: var(--cream); }
+    .banner-dismiss { font-size: 16px; color: rgba(245,240,232,0.3); cursor: pointer; flex-shrink: 0; padding: 2px 4px; }
+
+    #map { flex: 1; min-height: 0; }
+
+    #drawer { background: var(--bg); border-top: 1px solid rgba(201,168,76,0.18); flex-shrink: 0; max-height: 38vh; display: flex; flex-direction: column; }
+    #drawer.collapsed { max-height: fit-content; }
+    #drawer.collapsed #drawer-body { display: none; }
+
+    #drawer-handle { padding: 9px 13px 7px; cursor: pointer; user-select: none; flex-shrink: 0; }
+    .handle-bar { width: 36px; height: 4px; background: rgba(201,168,76,0.25); border-radius: 2px; margin: 0 auto 9px; }
+
+    /* Tab row */
+    .tab-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    .tabs { display: flex; gap: 5px; }
+    .tab { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 5px 10px; font-size: 12px; font-weight: 600; color: rgba(245,240,232,0.5); cursor: pointer; }
+    .tab.active { background: rgba(201,168,76,0.16); border-color: var(--gold); color: var(--gold); }
+    @keyframes tabPulse { 0%,100% { opacity:0.5; } 50% { opacity:1; } }
+    .tab.loading { animation: tabPulse 0.75s ease-in-out infinite; }
+    .tab-right { display: flex; align-items: center; gap: 6px; }
+
+    /* Open Now toggle */
+    #open-now-btn { background: transparent; border: 1px solid var(--border); border-radius: 14px; padding: 5px 10px; font-size: 11px; font-weight: 600; color: rgba(245,240,232,0.4); cursor: pointer; }
+    #open-now-btn.on { background: rgba(111,207,151,0.12); border-color: var(--green); color: var(--green); }
+
+    /* OSM link */
+    #osm-link { display: none; font-size: 10px; color: rgba(245,240,232,0.3); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+    #osm-link:hover { color: var(--gold); }
+
+    .drawer-meta { display: flex; align-items: center; justify-content: space-between; }
+    #drawer-label { font-size: 10px; font-weight: 700; color: rgba(245,240,232,0.3); letter-spacing: 0.5px; text-transform: uppercase; }
+    #item-count { font-size: 10px; color: rgba(245,240,232,0.25); }
+
+    #drawer-body { overflow-y: auto; padding: 4px 12px 12px; -webkit-overflow-scrolling: touch; flex: 1; min-height: 0; }
+
+    /* Cards */
+    .item-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 6px; cursor: pointer; display: flex; align-items: flex-start; gap: 10px; }
+    .item-card:active { background: rgba(201,168,76,0.09); }
+    .item-card.nearby { border-color: var(--gold); background: rgba(201,168,76,0.06); }
+    .item-card.closed-now { opacity: 0.45; }
+    .item-card.selected { border-color: rgba(201,168,76,0.55) !important; background: rgba(201,168,76,0.11) !important; opacity: 1 !important; box-shadow: inset 3px 0 0 var(--gold); }
+
+    .item-icon { font-size: 19px; flex-shrink: 0; margin-top: 1px; line-height: 1; }
+    .item-icon.thumbable { width: 40px; height: 40px; border-radius: 7px; overflow: hidden; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; margin-top: 0; flex-shrink: 0; }
+    .item-icon.thumbable img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .item-info { flex: 1; min-width: 0; }
+    .item-top { display: flex; align-items: baseline; gap: 6px; }
+    .item-name { font-size: 13px; font-weight: 600; color: var(--cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .open-badge { font-size: 10px; font-weight: 600; flex-shrink: 0; }
+    .open-badge.open { color: var(--green); }
+    .open-badge.closed { color: var(--red); }
+    .sellout-badge { font-size: 10px; font-weight: 600; color: #f0a050; flex-shrink: 0; }
+    .soldout-badge { font-size: 10px; font-weight: 600; color: rgba(224,112,112,0.7); flex-shrink: 0; }
+    .item-note { font-size: 11px; color: rgba(245,240,232,0.48); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item-hours { font-size: 10px; color: rgba(245,240,232,0.28); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item-dist { font-size: 12px; font-weight: 600; color: var(--gold); flex-shrink: 0; padding-top: 1px; }
+    .item-dist.near { color: var(--green); }
+
+    #status { position: absolute; bottom: calc(38vh + 10px); left: 50%; transform: translateX(-50%); background: rgba(26,17,8,0.93); color: var(--cream); font-size: 13px; padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(201,168,76,0.3); backdrop-filter: blur(8px); z-index: 1000; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.3s; }
+    #status.visible { opacity: 1; }
+
+    #loading { position: absolute; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; z-index: 9999; }
+    #loading.hidden { display: none; }
+    .spinner { width: 34px; height: 34px; border: 3px solid rgba(201,168,76,0.2); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .load-text { color: var(--gold); font-size: 15px; }
+
+    .leaflet-popup-content-wrapper { background: #1f1509; color: var(--cream); border: 1px solid var(--gold); border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
+    .leaflet-popup-tip { background: #1f1509; }
+    .popup-name { font-weight: 700; font-size: 14px; }
+    .popup-note { font-size: 12px; color: rgba(245,240,232,0.55); margin-top: 3px; font-style: italic; }
+    .popup-hours { font-size: 11px; color: var(--gold); margin-top: 3px; }
+    .popup-dist { font-size: 12px; color: var(--gold); margin-top: 4px; }
+    .popup-addr { font-size: 11px; color: rgba(245,240,232,0.35); margin-top: 2px; }
+  </style>
+</head>
+<body>
+
+<div id="wx-overlay" onclick="toggleWxPanel()"></div>
+<div id="wx-panel">
+  <div class="wx-row">
+    <div>
+      <div class="wx-left-emoji" id="wp-emoji">🌤️</div>
+      <div class="wx-desc" id="wp-desc">Loading Paris weather...</div>
+    </div>
+    <div class="wx-right">
+      <div class="wx-temp" id="wp-temp">--°</div>
+      <div class="wx-range" id="wp-range">H: -- · L: --</div>
+      <div class="wx-precip" id="wp-precip">Rain chance: --%</div>
+    </div>
+  </div>
+  <hr class="wx-divider">
+  <div class="wx-forecast">
+    <div class="wx-day-card">
+      <div class="wx-day-label">Tomorrow</div>
+      <div class="wx-day-emoji" id="wp-d1-emoji">—</div>
+      <div class="wx-day-temp" id="wp-d1-temp">—</div>
+      <div class="wx-day-rain" id="wp-d1-rain">—</div>
+    </div>
+    <div class="wx-day-card">
+      <div class="wx-day-label" id="wp-d2-label">—</div>
+      <div class="wx-day-emoji" id="wp-d2-emoji">—</div>
+      <div class="wx-day-temp" id="wp-d2-temp">—</div>
+      <div class="wx-day-rain" id="wp-d2-rain">—</div>
+    </div>
+  </div>
+  <a class="wx-metro-link" href="https://www.ratp.fr/information-trafic" target="_blank" onclick="toggleWxPanel()">
+    <div>
+      <div>🚇 RATP Metro Status</div>
+      <div class="wx-metro-sub">Opens live disruption map in browser</div>
+    </div>
+    <div style="font-size:18px;opacity:0.5">↗</div>
+  </a>
+  <button class="wx-close" onclick="toggleWxPanel()">Close</button>
+</div>
+
+<div id="loading" class="hidden">
+  <div style="font-size:40px">🥐</div>
+  <div class="load-text">Loading all bakeries...</div>
+  <div class="spinner"></div>
+</div>
+
+<header>
+  <div class="logo">🗺 Paris <span>Guide</span></div>
+  <div class="header-right">
+    <button id="weather-pill" class="pill" onclick="toggleWxPanel()">--°F</button>
+    <button id="locate-btn" class="pill" onclick="locateMe()">📍 Find Me</button>
+  </div>
+</header>
+
+<div id="day-banner" class="hidden">
+  <div class="banner-text" id="banner-text"></div>
+  <div class="banner-dismiss" onclick="document.getElementById('day-banner').classList.add('hidden')">✕</div>
+</div>
+
+<div id="map"></div>
+<div id="status"></div>
+
+<div id="drawer">
+  <div id="drawer-handle" onclick="toggleDrawer()">
+    <div class="handle-bar"></div>
+    <div class="tab-row">
+      <div class="tabs">
+        <div class="tab active" data-cat="all"       onclick="setTab('all',event)">All</div>
+        <div class="tab"        data-cat="bakery"    onclick="setTab('bakery',event)">🥐</div>
+        <div class="tab"        data-cat="park"      onclick="setTab('park',event)">🌳</div>
+        <div class="tab"        data-cat="market"    onclick="setTab('market',event)">🛒</div>
+        <div class="tab"        data-cat="curiosity" onclick="setTab('curiosity',event)">✨</div>
+      </div>
+      <div class="tab-right">
+        <span id="osm-link" onclick="toggleOsm(event)">All bakeries ↗</span>
+        <button id="open-now-btn" onclick="toggleOpenNow(event)">Open now</button>
+      </div>
+    </div>
+    <div class="drawer-meta">
+      <div id="drawer-label">All spots</div>
+      <div id="item-count"></div>
+    </div>
+  </div>
+  <div id="drawer-body"></div>
+</div>
+
+<script>
+// ── Airbnb ────────────────────────────────────────────────────────────────────
+const AIRBNB = { lat: 48.8692, lon: 2.3444, addr: "8 Rue Saint-Marc, 75002" };
+
+// ── Wikipedia thumbnail lookup (name → article title) ─────────────────────────
+const WIKI = {
+  // Bakeries — local assets + Wikipedia fallback for Éric Kayser
+  "Du Pain et des Idées":          "local:assets/du pain et des idées.png",
+  "Mamiche":                       "local:assets/Mamiche.png",
+  "Bo&Mie":                        "local:assets/Bo&Mie.png",
+  "Maison Landemaine":             "local:assets/Maison Landemaine.png",
+  "Gontran Cherrier":              "local:assets/gontran cherrier.png",
+  "Le Grenier à Pain":             "local:assets/le grenier à pain.png",
+  "Éric Kayser":                   "Éric Kayser",
+  "Blé Sucré":                     "local:assets/Ble Sucre.png",
+  "Terroirs d'Avenir":             "local:assets/Boulangerie Terroir d'Avenir.png",
+  "Utopie":                        "local:assets/Boulangerie Utopie.png",
+  "Chambelland":                   "local:assets/Chambelland Boulangerie.png",
+  "Sain Boulangerie":              "local:assets/Sain Boulangerie 2.png",
+  "Ten Belles Bread":              "local:assets/Ten Belles Bread.png",
+  "Vandermeersch":                 "local:assets/Vandermeersch.png",
+  // Parks
+  "Jardin du Luxembourg":      "Jardin du Luxembourg",
+  "Jardin des Tuileries":      "Tuileries Garden",
+  "Parc Monceau":              "Parc Monceau",
+  "Champ de Mars":             "Champ de Mars, Paris",
+  "Parc de la Villette":       "Parc de la Villette",
+  "Parc des Buttes-Chaumont":  "Buttes-Chaumont",
+  "Jardins du Palais Royal":   "Palais-Royal",
+  // Markets
+  "Rue Montorgueil":           "Rue Montorgueil",
+  "Marché des Enfants Rouges": "Marché des Enfants Rouges",
+  "Le Bon Marché":             "Le Bon Marché",
+  "Marché d'Aligre":           "Marché d'Aligre",
+  "La Grande Épicerie":        "La Grande Épicerie",
+  // Curiosities
+  "Shakespeare and Company":   "Shakespeare and Company, Paris",
+  "Taschen Paris":             "Taschen",
+  "Galignani":                 "Galignani",
+  "Librairie du Pompidou":     "Centre Georges-Pompidou",
+  "Passage des Panoramas":     "Passage des Panoramas",
+  "Musée des Arts Décoratifs": "Musée des Arts Décoratifs, Paris",
+  "Palais de Tokyo":           "Palais de Tokyo",
+  "Catacombes de Paris":       "Catacombs of Paris",
+  "Abbesses Metro Station":    "Abbesses (Paris Métro)",
+  "Arts et Métiers Metro":     "Arts et Métiers (Paris Métro)",
+  "Butte aux Cailles":         "Butte-aux-Cailles",
+  "Canal Saint-Martin":        "Canal Saint-Martin",
+  "Galerie Vivienne":          "Galerie Vivienne",
+  "Promenade Plantée":         "Promenade plantée",
+  "Trocadéro Esplanade":       "Trocadéro",
+  "Pont Saint-Louis":          "Pont Saint-Louis (Paris)",
+  "Place Igor Stravinsky":     "Place Igor-Stravinsky",
+  "Galerie 1900-2000":         "Surrealism",
+  // Static green-dot parks
+  "Parc Montsouris":           "Parc Montsouris",
+  "Jardin des Plantes":        "Jardin des Plantes",
+  "Parc de Bercy":             "Parc de Bercy",
+  "Bois de Boulogne":          "Bois de Boulogne",
+  "Bois de Vincennes":         "Bois de Vincennes",
+  "Parc Floral de Paris":      "Parc Floral de Paris",
+  "Square du Vert-Galant":     "Square du Vert-Galant",
+  "Parc de Belleville":        "Parc de Belleville",
+  "Parc André Citroën":        "Parc André Citroën",
+  "Jardins du Trocadéro":      "Jardins du Trocadéro",
+  "Jardin du Ranelagh":        "Jardin du Ranelagh",
+  "Parc de la Muette":         "Parc de la Muette",
+  "Jardin de Reuilly":         "Jardin de Reuilly",
+};
+
+// Data format: icon, name, note, addr, lat, lon
+//   off: day-of-week numbers that are closed (0=Sun, 1=Mon … 6=Sat)
+//   hrs: [openHour, closeHour] 24h floats — used for open-now logic
+//   hours: human-readable string shown in card
+
+// ── Bakeries ──────────────────────────────────────────────────────────────────
+const BAKERIES = [
+  { icon:"🥐", name:"Du Pain et des Idées",     note:"Escargots (pistachio/praline) & chausson aux pommes — a must",      addr:"34 Rue Yves Toudic, 75010",          lat:48.8686, lon:2.3592, off:[0,6], hrs:[6.75,20],   hours:"Mon–Fri 6:45am–8pm · closed weekends", sellsOutHour:10 },
+  { icon:"🍞", name:"Poilâne",                  note:"The miche — massive tangy sourdough round, by slice or whole loaf",  addr:"8 Rue du Cherche-Midi, 75006",       lat:48.8494, lon:2.3331, off:[0],   hrs:[7.25,20.25],hours:"Mon–Sat 7:15am–8:15pm · closed Sun" },
+  { icon:"🍪", name:"Blé Sucré",                note:"Madeleines & croissants — endlessly cited as Paris's finest",        addr:"7 Rue Antoine Vollon, 75012",        lat:48.8509, lon:2.3701, off:[1],   hrs:[7,20],     hours:"Tue–Sun 7am–8pm · closed Mon" },
+  { icon:"🍫", name:"Mamiche",                  note:"Chocolate babka & focaccia — perpetually sold out, arrive early",    addr:"45 Rue Condorcet, 75009",            lat:48.8804, lon:2.3428, off:[0,1], hrs:[9,19],     hours:"Tue–Sat 9am–7pm · closed Sun–Mon", sellsOutHour:12 },
+  { icon:"🥐", name:"Bo&Mie",                   note:"Croissant ranked top 3 in Paris — also try the seeded roll",         addr:"18 Rue de Turbigo, 75002",           lat:48.8635, lon:2.3527, off:[0],   hrs:[7.5,19.5], hours:"Mon–Sat 7:30am–7:30pm · closed Sun" },
+  { icon:"🥖", name:"Maison Landemaine",        note:"Award-winning baguette de tradition — Japanese-French precision",    addr:"26 Rue des Martyrs, 75009",          lat:48.8796, lon:2.3420, off:[0],   hrs:[7,20],     hours:"Mon–Sat 7am–8pm · closed Sun" },
+  { icon:"🌾", name:"Chambelland",              note:"Best gluten-free in Paris — rice & buckwheat sourdough loaves",      addr:"14 Rue Ternaux, 75011",              lat:48.8651, lon:2.3793, off:[2],   hrs:[9,19.5],   hours:"Wed–Mon 9am–7:30pm · closed Tue" },
+  { icon:"🍞", name:"Ten Belles Bread",         note:"Country sourdough loaves & tartines; excellent coffee",              addr:"17 Rue Bréguet, 75011",              lat:48.8576, lon:2.3732, off:[],    hrs:[8,18],     hours:"Mon–Fri 8am–5pm · Sat–Sun 9am–6pm" },
+  { icon:"🥐", name:"Liberté",                 note:"Colorful laminated croissants & milk bread — Benoît Castel",         addr:"39 Rue des Vinaigriers, 75010",      lat:48.8687, lon:2.3614, off:[1],   hrs:[8,20],     hours:"Tue–Sun 8am–8pm · closed Mon" },
+  { icon:"🌾", name:"Sain Boulangerie",         note:"Whole grain & ancient grain loaves — sells out early, go before noon", addr:"15 Rue Marie et Louise, 75010",    lat:48.8703, lon:2.3656, off:[1,2], hrs:[8,14],     hours:"Wed–Sun 8am–2pm · closed Mon–Tue", sellsOutHour:11 },
+  { icon:"🥐", name:"Utopie",                  note:"Flavored croissants (matcha, sesame, hazelnut) that actually deliver", addr:"20 Rue Jean-Pierre Timbaud, 75011", lat:48.8637, lon:2.3769, off:[0,1], hrs:[8,20],     hours:"Tue–Sat 8am–8pm · closed Sun–Mon" },
+  { icon:"🥖", name:"Pain Pain",               note:"Baguette & croissant both ranked in city's top tier repeatedly",     addr:"88 Rue des Martyrs, 75018",          lat:48.8844, lon:2.3384, off:[1],   hrs:[7,20],     hours:"Tue–Sun 7am–8pm · closed Mon" },
+  { icon:"🍮", name:"Benoît Castel",            note:"Canelés & raspberry tart — neighborhood gem in Ménilmontant",        addr:"150 Rue de Ménilmontant, 75020",     lat:48.8668, lon:2.3942, off:[1],   hrs:[8,20],     hours:"Tue–Sun 8am–8pm · closed Mon" },
+  { icon:"🍞", name:"Gontran Cherrier",         note:"Inventive flavored loaves — squid ink, curry, seaweed baguettes",    addr:"22 Rue Caulaincourt, 75018",         lat:48.8849, lon:2.3349, off:[0],   hrs:[7,20],     hours:"Mon–Sat 7am–8pm · closed Sun" },
+  { icon:"🧈", name:"Vandermeersch",            note:"Kouign-amann — the definitive Paris version, worth the trip east",   addr:"278 Avenue Daumesnil, 75012",        lat:48.8411, lon:2.3953, off:[1,2], hrs:[9,19.5],   hours:"Wed–Sun 9am–7:30pm · closed Mon–Tue", sellsOutHour:13 },
+  { icon:"🥖", name:"Éric Kayser",             note:"Baguette Monge — award-winning signature, organic levain",           addr:"8 Rue Monge, 75005",                 lat:48.8512, lon:2.3520, off:[],    hrs:[7,20.5],   hours:"Daily 7am–8:30pm" },
+  { icon:"🍋", name:"Des Gâteaux et du Pain",  note:"Tarte au citron & tarte Tatin — Claire Damon's elegant pâtisserie",  addr:"89 Rue du Bac, 75007",               lat:48.8543, lon:2.3276, off:[2],   hrs:[9,19.5],   hours:"Wed–Mon 9am–7:30pm · closed Tue" },
+  { icon:"🥖", name:"Le Grenier à Pain",       note:"Grand Prix de la Baguette winner — baguette is the whole point",     addr:"38 Rue des Abbesses, 75018",         lat:48.8842, lon:2.3375, off:[1],   hrs:[7.5,20],   hours:"Tue–Sun 7:30am–8pm · closed Mon" },
+  { icon:"🥖", name:"Maison d'Isabelle",       note:"Best baguette de Paris 2018 & 2019 (Grand Prix winner)",             addr:"47bis Bd Saint-Germain, 75005",      lat:48.8514, lon:2.3476, off:[0],   hrs:[7,20],     hours:"Mon–Sat 7am–8pm · Sun until 1pm" },
+  { icon:"🍰", name:"Laurent Duchêne",         note:"Millefeuille & tarte au citron — MOF award-winning precision",       addr:"2 Rue Wurtz, 75013",                 lat:48.8274, lon:2.3500, off:[0,1], hrs:[9,19.5],   hours:"Tue–Sat 9am–7:30pm · closed Sun–Mon" },
+  { icon:"☕", name:"Bread & Roses",           note:"Scones, quiche & pastries — relaxed café near Luxembourg",           addr:"7 Rue de Fleurus, 75006",            lat:48.8469, lon:2.3331, off:[0],   hrs:[8,19],     hours:"Mon–Sat 8am–7pm · closed Sun" },
+  { icon:"🥐", name:"Boulangerie Julien",      note:"Croissant & pain au chocolat — reliable classic near the Louvre",    addr:"75 Rue Saint-Honoré, 75001",         lat:48.8601, lon:2.3443, off:[0],   hrs:[7,20.5],   hours:"Mon–Sat 7am–8:30pm · closed Sun" },
+  { icon:"🌿", name:"Terroirs d'Avenir",       note:"Bakery of Paris's top heritage-produce supplier — exceptional bread", addr:"7 Rue du Nil, 75002",               lat:48.8641, lon:2.3484, off:[0,1], hrs:[8,19.5],   hours:"Tue–Sat 8am–7:30pm · closed Sun–Mon" },
+];
+
+// ── Parks ─────────────────────────────────────────────────────────────────────
+const PARKS = [
+  { icon:"🎠", name:"Jardin du Luxembourg",    note:"Best for a 1-yr-old — playground, carousel & puppet theater",         addr:"Bd Saint-Michel, 75006",             lat:48.8462, lon:2.3372, off:[], hrs:[7.5,21.5],  hours:"Daily 7:30am–dusk" },
+  { icon:"🌳", name:"Jardin des Tuileries",    note:"Central & gorgeous — wide paths, very easy for a stroller",           addr:"Place de la Concorde, 75001",        lat:48.8638, lon:2.3276, off:[], hrs:[7,21],      hours:"Daily 7am–9pm (summer)" },
+  { icon:"🌸", name:"Parc Monceau",            note:"Elegant & shaded — beloved by local families with young kids",        addr:"Bd de Courcelles, 75008",            lat:48.8797, lon:2.3090, off:[], hrs:[7,22],      hours:"Daily 7am–10pm (summer)" },
+  { icon:"🗼", name:"Champ de Mars",           note:"Under the Eiffel Tower — perfect for a picnic blanket afternoon",     addr:"Av Gustave Eiffel, 75007",           lat:48.8556, lon:2.2952, off:[], hrs:[0,24],      hours:"Always open" },
+  { icon:"🐉", name:"Parc de la Villette",     note:"Best for young kids — huge play areas, dragon slide, open lawns",     addr:"211 Av Jean-Jaurès, 75019",          lat:48.8938, lon:2.3895, off:[], hrs:[0,24],      hours:"Always open · attractions vary" },
+  { icon:"⛰️",  name:"Parc des Buttes-Chaumont",note:"Hilly & beautiful — less touristy, great for a long stroll",         addr:"Rue Manin, 75019",                   lat:48.8797, lon:2.3827, off:[], hrs:[7,22],      hours:"Daily 7am–10pm (summer)" },
+  { icon:"🏛️", name:"Jardins du Palais Royal", note:"Striped columns & shaded arcades — calm, central, stroller-friendly", addr:"Pl du Palais Royal, 75001",          lat:48.8638, lon:2.3369, off:[], hrs:[7,23],      hours:"Daily 7am–11pm (summer)" },
+];
+
+// ── Markets ───────────────────────────────────────────────────────────────────
+const MARKETS = [
+  { icon:"🥦", name:"Rue Montorgueil",         note:"Best food street in Paris — fishmongers, fromageries, cafés",         addr:"Rue Montorgueil, 75002",             lat:48.8635, lon:2.3487, off:[], hrs:[7,20],      hours:"Daily 7am–8pm · some shops close Sun PM" },
+  { icon:"🏚️", name:"Marché des Enfants Rouges",note:"Oldest covered market in Paris (1615) — incredible food stalls",     addr:"39 Rue de Bretagne, 75003",          lat:48.8618, lon:2.3619, off:[1], hrs:[8.5,20],   hours:"Tue–Sat 8:30am–7:30pm · Sun 8:30am–2pm · closed Mon" },
+  { icon:"🧺", name:"La Grande Épicerie",       note:"World-class food hall — the best selection of French products",       addr:"38 Rue de Sèvres, 75007",            lat:48.8512, lon:2.3253, off:[], hrs:[8.5,21],    hours:"Mon–Sat 8:30am–9pm · Sun 10am–7pm" },
+  { icon:"🏬", name:"Le Bon Marché",            note:"Iconic luxury department store — beautiful building to browse",       addr:"24 Rue de Sèvres, 75007",            lat:48.8510, lon:2.3259, off:[], hrs:[10,19.75],  hours:"Mon–Sat 10am–7:45pm · Sun 11am–7:45pm" },
+  { icon:"🥩", name:"Les Enfants du Marché",    note:"Lively weekend market — great vendors, buzzy atmosphere",             addr:"39 Bd Beaumarchais, 75003",          lat:48.8578, lon:2.3678, off:[1,2,3,4,5], hrs:[9,18], hours:"Sat–Sun only" },
+  { icon:"🍋", name:"Marché d'Aligre",          note:"Best authentic Paris market — local, affordable, great produce",      addr:"Place d'Aligre, 75012",              lat:48.8504, lon:2.3710, off:[1], hrs:[7.5,13],   hours:"Tue–Sun 7:30am–1pm · closed Mon" },
+  { icon:"🛒", name:"Marché Bastille",          note:"Huge outdoor market Thu & Sun — one of the best in the city",         addr:"Bd Richard-Lenoir, 75011",           lat:48.8533, lon:2.3698, off:[0,1,2,3,5,6], hrs:[7,14.5], hours:"Thu 7am–2:30pm · Sun 7am–3pm" },
+];
+
+// ── Curiosities ───────────────────────────────────────────────────────────────
+const CURIOSITIES = [
+  { icon:"📐", name:"Artazart",                 note:"THE graphic design & visual arts bookshop in Paris — essential stop",  addr:"83 Quai de Valmy, 75010",           lat:48.8699, lon:2.3636, off:[], hrs:[10.5,19.5], hours:"Mon–Sat 10:30am–7:30pm · Sun 11am–7:30pm" },
+  { icon:"📚", name:"Ofr.",                     note:"Cult indie art, design & fashion books, zines and mags — very curated", addr:"20 Rue Dupetit-Thouars, 75003",    lat:48.8618, lon:2.3601, off:[0,1], hrs:[11,19.5], hours:"Tue–Sat 11am–7:30pm · closed Sun–Mon" },
+  { icon:"📖", name:"Taschen Paris",            note:"Design, brand identity, architecture & photography — all the big ones", addr:"2 Rue de Buci, 75006",             lat:48.8527, lon:2.3367, off:[], hrs:[10,19.5],  hours:"Mon–Sat 10am–7:30pm · Sun noon–7pm" },
+  { icon:"🏛️", name:"Librairie du Pompidou",   note:"Best art & design book selection in the city — inside the Pompidou",   addr:"Place Georges-Pompidou, 75004",    lat:48.8607, lon:2.3524, off:[2], hrs:[11,21],   hours:"Wed–Mon 11am–9pm · closed Tue" },
+  { icon:"📚", name:"Shakespeare and Company",  note:"Iconic English bookshop — strong art, design & photography section",   addr:"37 Rue de la Bûcherie, 75005",     lat:48.8526, lon:2.3470, off:[], hrs:[11,22],   hours:"Mon–Fri 11am–10pm · Sat–Sun 10am–10pm" },
+  { icon:"📖", name:"Galignani",               note:"Oldest English bookshop on the continent — excellent design/art floor",  addr:"224 Rue de Rivoli, 75001",         lat:48.8637, lon:2.3295, off:[0], hrs:[10,19],  hours:"Mon–Sat 10am–7pm · closed Sun" },
+  { icon:"📚", name:"Librairie Yvon Lambert",   note:"Contemporary art books & artists' publications — small and excellent",  addr:"108 Rue Vieille du Temple, 75003", lat:48.8619, lon:2.3626, off:[0,1], hrs:[11,19], hours:"Tue–Sat 11am–7pm · closed Sun–Mon" },
+  { icon:"🖼️", name:"Galerie 1900-2000",        note:"Original prints & posters — Surrealist and Dada-era speciality",       addr:"8 Rue Bonaparte, 75006",           lat:48.8536, lon:2.3341, off:[0,1], hrs:[10.5,19], hours:"Tue–Sat 10:30am–7pm · closed Sun–Mon" },
+  { icon:"🖨️", name:"Galerie Lelong & Co.",     note:"Contemporary prints & limited editions by major living artists",        addr:"13 Rue de Téhéran, 75008",         lat:48.8761, lon:2.3139, off:[0,1], hrs:[10.5,18], hours:"Tue–Sat 10:30am–6pm · closed Sun–Mon" },
+  { icon:"🗞️", name:"Passage des Panoramas",    note:"Vintage prints, old posters & stamps at honest prices — Racines is inside, steps from your Airbnb", addr:"11 Bd Montmartre, 75002", lat:48.8710, lon:2.3447, off:[], hrs:[8.5,24], hours:"Daily 8:30am–midnight" },
+  { icon:"🎨", name:"Musée des Arts Décoratifs", note:"Graphic design, poster history & typography collection — one of the best design museums in the world", addr:"107 Rue de Rivoli, 75001", lat:48.8634, lon:2.3333, off:[1], hrs:[11,18], hours:"Tue–Sun 11am–6pm · closed Mon" },
+  { icon:"📖", name:"Palais de Tokyo",           note:"Best contemporary art bookshop in Paris — design, visual culture, theory. Open late.",               addr:"13 Av du Président Wilson, 75016", lat:48.8641, lon:2.2980, off:[2], hrs:[12,24], hours:"Wed–Mon noon–midnight · closed Tue" },
+  { icon:"💀", name:"Catacombes de Paris",       note:"300km of tunnels holding 6 million Parisian bones — eerie, singular, worth it",                       addr:"1 Av du Colonel Rol-Tanguy, 75014", lat:48.8339, lon:2.3328, off:[1], hrs:[10,20.5], hours:"Tue–Sun 10am–8:30pm · closed Mon · book ahead" },
+  { icon:"🚇", name:"Abbesses Metro Station",    note:"Guimard's original 1900 Art Nouveau glass canopy — most intact in Paris. Steps from Sacré-Cœur",        addr:"Place des Abbesses, 75018",         lat:48.8843, lon:2.3385, off:[], hrs:[5.5,1.25], hours:"Daily 5:30am–1:15am" },
+  { icon:"🚇", name:"Porte Dauphine Metro",      note:"The other surviving Guimard glass-and-iron baldachin — quieter and more dramatic than Abbesses",        addr:"Place du Maréchal de Lattre de Tassigny, 75016", lat:48.8704, lon:2.2748, off:[], hrs:[5.5,1.25], hours:"Daily 5:30am–1:15am" },
+  { icon:"🚇", name:"Arts et Métiers Metro",     note:"Steampunk submarine interior — Jules Verne copper rivets line this Line 11 station. Unlike anything else", addr:"60 Rue Réaumur, 75003",            lat:48.8655, lon:2.3540, off:[], hrs:[5.5,1.25], hours:"Daily 5:30am–1:15am" },
+  { icon:"🎨", name:"Rue Dénoyez",               note:"Belleville's legal graffiti corridor — every surface painted, constantly rotating. The real thing",      addr:"Rue Dénoyez, 75020",               lat:48.8700, lon:2.3834, off:[], hrs:[0,24],    hours:"Always accessible" },
+  { icon:"🎨", name:"Butte aux Cailles",         note:"Quiet village hill south of the 13th — walls covered in murals, great for a stroll",                    addr:"Rue de la Butte-aux-Cailles, 75013", lat:48.8269, lon:2.3514, off:[], hrs:[0,24],  hours:"Always accessible" },
+  { icon:"🎨", name:"Street Art 13",             note:"Europe's largest open-air street art district — Obey, Shepard Fairey, JR. Bd Vincent Auriol to Av d'Italie", addr:"Rue Jeanne d'Arc, 75013",        lat:48.8307, lon:2.3560, off:[], hrs:[0,24],  hours:"Always accessible" },
+  { icon:"🎨", name:"Canal Saint-Martin",        note:"Street art lines the quai walls — Hopare, Lek & Sowat, plus the iron footbridges and locks",             addr:"Quai de Valmy, 75010",             lat:48.8707, lon:2.3635, off:[], hrs:[0,24],    hours:"Always accessible" },
+  { icon:"🎭", name:"Place Igor Stravinsky",     note:"Paris's best busker plaza — fire jugglers, mimes, acrobats, living statues. Daily when dry, next to Pompidou", addr:"Place Igor Stravinsky, 75004",    lat:48.8607, lon:2.3513, off:[], hrs:[0,24],    hours:"Always accessible · performers typically noon–8pm" },
+  { icon:"🎸", name:"Pont Saint-Louis",          note:"The tiny bridge between the islands — one musician has held court here for years, usually a guitarist",       addr:"Pont Saint-Louis, 75004",           lat:48.8526, lon:2.3519, off:[], hrs:[0,24],    hours:"Always accessible" },
+  { icon:"🤸", name:"Trocadéro Esplanade",       note:"Acrobat crews perform for the Eiffel Tower terrace crowd — pure spectacle, great for a 1-yr-old watching",   addr:"Place du Trocadéro, 75016",         lat:48.8624, lon:2.2893, off:[], hrs:[0,24],    hours:"Always accessible · performers typically afternoons" },
+  { icon:"🌿", name:"Promenade Plantée",         note:"World's first elevated park (1993) — stroller-accessible trail above the Viaduc des Arts, very quiet",       addr:"Coulée Verte René-Dumont, 75012",   lat:48.8487, lon:2.3719, off:[], hrs:[8,21],    hours:"Daily 8am–dusk · stroller ramp at street level" },
+  { icon:"🏛️", name:"Galerie Vivienne",          note:"Most beautiful glass-roof arcade in Paris — mosaic floors, wine bar, design bookshop. 3 min from Airbnb",    addr:"4 Rue des Petits Champs, 75002",    lat:48.8659, lon:2.3381, off:[], hrs:[8.5,20.5], hours:"Daily 8:30am–8:30pm · shops vary" },
+];
+
+// ── State ─────────────────────────────────────────────────────────────────────
+const ALL_ITEMS = [
+  ...BAKERIES.map(b => ({...b, cat:'bakery'})),
+  ...PARKS.map(b => ({...b, cat:'park'})),
+  ...MARKETS.map(b => ({...b, cat:'market'})),
+  ...CURIOSITIES.map(b => ({...b, cat:'curiosity'})),
+];
+
+let activeCategory = 'all';
+let openNowOnly = false;
+let osmMode = false;
+let osmLoaded = false;
+let osmItems = [];
+let osmParkMarkers = [];
+let userLatLng = null;
+let userMarker = null;
+let airbnbMarker = null;
+let watchId = null;
+let mapMarkers = [];
+let alertedSet = new Set();
+let drawerOpen = true;
+
+// ── Map ───────────────────────────────────────────────────────────────────────
+const map = L.map('map', { center: [48.8650, 2.3440], zoom: 13, zoomControl: false });
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap, © CARTO', maxZoom: 19
+}).addTo(map);
+L.control.zoom({ position: 'topright' }).addTo(map);
+
+// ── Paris time helpers ────────────────────────────────────────────────────────
+function parisNow() {
+  const d = new Date();
+  const p = new Date(d.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+  return { day: p.getDay(), hour: p.getHours() + p.getMinutes() / 60 };
+}
+
+function isOpenNow(item) {
+  if (!item.hrs) return null;
+  const { day, hour } = parisNow();
+  if (item.off && item.off.includes(day)) return false;
+  const [open, close] = item.hrs;
+  if (open === 0 && close === 24) return true;
+  return hour >= open && hour < close;
+}
+
+// ── Icons ─────────────────────────────────────────────────────────────────────
+function makeIcon(emoji, scale = 1) {
+  const s = Math.round(20 * scale);
+  return L.divIcon({ html: `<div style="font-size:${s}px;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.8))">${emoji}</div>`, className:'', iconSize:[s,s], iconAnchor:[s/2,s/2], popupAnchor:[0,-s/2-4] });
+}
+function userDotIcon() {
+  return L.divIcon({ html:`<div style="width:14px;height:14px;background:#4da6ff;border:3px solid white;border-radius:50%;box-shadow:0 0 0 4px rgba(77,166,255,0.25),0 2px 8px rgba(0,0,0,0.5)"></div>`, className:'', iconSize:[14,14], iconAnchor:[7,7] });
+}
+
+// ── Airbnb ────────────────────────────────────────────────────────────────────
+function plotAirbnb() {
+  if (airbnbMarker) map.removeLayer(airbnbMarker);
+  airbnbMarker = L.marker([AIRBNB.lat, AIRBNB.lon], { icon: makeIcon('🏠', 1.3), zIndexOffset: 900 })
+    .addTo(map)
+    .bindPopup(`<div class="popup-name">🏠 Your Airbnb</div><div class="popup-addr">${AIRBNB.addr}</div>`, { maxWidth: 200 });
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function distM(a, b) {
+  const R = 6371000, r = x => x * Math.PI / 180;
+  const dl = r(b[0]-a[0]), dg = r(b[1]-a[1]);
+  const x = Math.sin(dl/2)**2 + Math.cos(r(a[0]))*Math.cos(r(b[0]))*Math.sin(dg/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
+}
+function fmtDist(m) { const mins = Math.round(m / 80); return mins < 1 ? '< 1 min' : `~${mins} min`; }
+function showStatus(msg, dur=3000) {
+  const el = document.getElementById('status');
+  el.textContent = msg; el.classList.add('visible');
+  clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('visible'), dur);
+}
+function toggleDrawer() { drawerOpen = !drawerOpen; document.getElementById('drawer').classList.toggle('collapsed', !drawerOpen); }
+
+// ── Audio chime ───────────────────────────────────────────────────────────────
+function playChime() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [[523.25,0],[659.25,0.18],[783.99,0.36]].forEach(([freq,when]) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination); o.type='sine'; o.frequency.value=freq;
+      g.gain.setValueAtTime(0, ctx.currentTime+when);
+      g.gain.linearRampToValueAtTime(0.27, ctx.currentTime+when+0.04);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+when+0.6);
+      o.start(ctx.currentTime+when); o.stop(ctx.currentTime+when+0.65);
+    });
+  } catch(e) {}
+}
+
+// ── Active items ──────────────────────────────────────────────────────────────
+function getDisplayItems() {
+  let base;
+  if (osmMode) base = osmItems;
+  else if (activeCategory === 'all') base = ALL_ITEMS;
+  else base = ALL_ITEMS.filter(b => b.cat === activeCategory);
+
+  if (openNowOnly) base = base.filter(b => isOpenNow(b) !== false);
+  return base;
+}
+
+// ── Markers ───────────────────────────────────────────────────────────────────
+function clearMapMarkers() { mapMarkers.forEach(m => map.removeLayer(m)); mapMarkers = []; }
+
+function plotMarkers() {
+  clearMapMarkers();
+  getDisplayItems().forEach(b => {
+    const nearby = b.dist && b.dist < 250;
+    const closed = isOpenNow(b) === false;
+    const m = L.marker([b.lat, b.lon], { icon: makeIcon(b.icon || '📍', nearby ? 1.2 : 1), opacity: closed ? 0.4 : 1 })
+      .addTo(map)
+      .bindPopup(() => popupHTML(b), { maxWidth: 220 });
+    b._marker = m;
+    mapMarkers.push(m);
+  });
+}
+
+function popupHTML(b) {
+  const open = isOpenNow(b);
+  const badge = open === true ? '<span style="color:#6fcf97;font-size:11px"> · Open now</span>' : open === false ? '<span style="color:#e07070;font-size:11px"> · Closed</span>' : '';
+  const wikiTitle = WIKI[b.name] || '';
+  const cached = wikiTitle ? wikiCache.get(wikiTitle) : null;
+  const thumbHtml = cached
+    ? `<img src="${cached.src}" style="width:100%;border-radius:7px;margin-bottom:7px;display:block;max-height:100px;object-fit:cover;">`
+    : wikiTitle ? `<div class="popup-thumb-load" data-wiki="${wikiTitle}"></div>` : '';
+  return `${thumbHtml}<div class="popup-name">${b.icon||'📍'} ${b.name}${badge}</div>
+    ${b.note ? `<div class="popup-note">${b.note}</div>` : ''}
+    ${b.hours ? `<div class="popup-hours">🕐 ${b.hours}</div>` : ''}
+    ${b.addr ? `<div class="popup-addr">${b.addr}</div>` : ''}
+    ${b.dist != null ? `<div class="popup-dist">📍 ${fmtDist(b.dist)} away</div>` : ''}`;
+}
+
+function flyTo(lat, lon) {
+  map.flyTo([lat, lon], 17, { duration: 0.7 });
+  const b = getDisplayItems().find(x => x.lat === lat && x.lon === lon);
+  if (b?._marker) b._marker.openPopup();
+}
+
+let selectedKey = null;
+
+function selectCard(el, lat, lon) {
+  selectedKey = `${lat},${lon}`;
+  document.querySelectorAll('.item-card.selected').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  flyTo(lat, lon);
+}
+
+// ── List ──────────────────────────────────────────────────────────────────────
+function renderList() {
+  const body = document.getElementById('drawer-body');
+  const countEl = document.getElementById('item-count');
+  const labelEl = document.getElementById('drawer-label');
+
+  const items = [...getDisplayItems()];
+  if (userLatLng) {
+    items.forEach(b => b.dist = distM([b.lat,b.lon], userLatLng));
+    items.sort((a, b) => a.dist - b.dist);
+  }
+
+  const catLabels = { all:'all spots', bakery:'bakeries', park:'parks', market:'markets', curiosity:'curiosities' };
+  labelEl.textContent = osmMode ? 'all Paris bakeries' : (catLabels[activeCategory] || 'spots');
+  countEl.textContent = items.length + ' spots' + (openNowOnly ? ' · open now' : '');
+
+  body.innerHTML = items.slice(0, 80).map(b => {
+    const nearby = b.dist && b.dist < 250;
+    const open = isOpenNow(b);
+    const closedClass = open === false ? 'closed-now' : '';
+    const badgeHtml = open === true
+      ? `<span class="open-badge open">Open</span>`
+      : open === false
+      ? `<span class="open-badge closed">Closed</span>`
+      : '';
+    const { hour } = parisNow();
+    const selloutHtml = b.sellsOutHour
+      ? hour < b.sellsOutHour
+        ? `<span class="sellout-badge">· sells out by ${b.sellsOutHour <= 12 ? b.sellsOutHour + 'am' : (b.sellsOutHour-12)+'pm'}</span>`
+        : `<span class="soldout-badge">· may be sold out</span>`
+      : '';
+    const distStr = b.dist != null ? fmtDist(b.dist) : '';
+    const wikiTitle = WIKI[b.name] || '';
+    return `<div class="item-card ${nearby?'nearby':''} ${closedClass}" data-key="${b.lat},${b.lon}" onclick="selectCard(this,${b.lat},${b.lon})">
+      <div class="item-icon${wikiTitle?' thumbable':''}"${wikiTitle?` data-wiki="${wikiTitle}"`:''}>${b.icon||'📍'}</div>
+      <div class="item-info">
+        <div class="item-top"><div class="item-name">${b.name}</div>${badgeHtml}${selloutHtml}</div>
+        ${b.note ? `<div class="item-note">${b.note}</div>` : ''}
+        ${b.hours ? `<div class="item-hours">🕐 ${b.hours}</div>` : ''}
+      </div>
+      ${distStr ? `<div class="item-dist ${nearby?'near':''}">${distStr}</div>` : ''}
+    </div>`;
+  }).join('');
+  if (selectedKey) {
+    const card = body.querySelector(`[data-key="${selectedKey}"]`);
+    if (card) card.classList.add('selected');
+  }
+  loadThumbnails();
+}
+
+// ── Static parks layer (no fetch — Paris parks don't move) ───────────────────
+const STATIC_PARKS = [
+  { lat:48.8213, lon:2.3378, name:"Parc Montsouris" },
+  { lat:48.8440, lon:2.3601, name:"Jardin des Plantes" },
+  { lat:48.8386, lon:2.3791, name:"Parc de Bercy" },
+  { lat:48.8637, lon:2.2492, name:"Bois de Boulogne" },
+  { lat:48.8357, lon:2.4322, name:"Bois de Vincennes" },
+  { lat:48.8369, lon:2.4432, name:"Parc Floral de Paris" },
+  { lat:48.8573, lon:2.3415, name:"Square du Vert-Galant" },
+  { lat:48.8703, lon:2.3834, name:"Parc de Belleville" },
+  { lat:48.8437, lon:2.2764, name:"Parc André Citroën" },
+  { lat:48.8607, lon:2.2923, name:"Jardins du Trocadéro" },
+  { lat:48.8857, lon:2.3204, name:"Square des Batignolles" },
+  { lat:48.8165, lon:2.3558, name:"Parc Kellermann" },
+  { lat:48.8177, lon:2.3605, name:"Parc de Choisy" },
+  { lat:48.8406, lon:2.3864, name:"Jardin de Reuilly" },
+  { lat:48.8919, lon:2.3564, name:"Parc de la Chapelle" },
+  { lat:48.8607, lon:2.3569, name:"Jardin Anne Frank" },
+  { lat:48.8629, lon:2.3601, name:"Square du Temple" },
+  { lat:48.8519, lon:2.3484, name:"Square Louvois" },
+  { lat:48.8524, lon:2.2849, name:"Parc de Saint-Cloud" },
+  { lat:48.8348, lon:2.3374, name:"Parc Montsouris" },
+  { lat:48.8774, lon:2.3644, name:"Parc des Buttes" },
+  { lat:48.8469, lon:2.3090, name:"Jardin du Ranelagh" },
+  { lat:48.8559, lon:2.2803, name:"Parc de la Muette" },
+  { lat:48.8916, lon:2.3393, name:"Square de Clignancourt" },
+  { lat:48.8648, lon:2.3090, name:"Square des Batignolles" },
+];
+
+function clearOsmParkMarkers() {
+  osmParkMarkers.forEach(m => map.removeLayer(m));
+  osmParkMarkers = [];
+}
+
+function showOsmParks() {
+  const curatedNames = new Set(PARKS.map(p => p.name));
+  STATIC_PARKS.forEach(p => {
+    if (curatedNames.has(p.name)) return;
+    const wikiTitle = WIKI[p.name] || '';
+    const thumbHtml = wikiTitle ? `<div class="popup-thumb-load" data-wiki="${wikiTitle}"></div>` : '';
+    const m = L.circleMarker([p.lat, p.lon], {
+      radius: 6, color: '#5a9e5a',
+      fillColor: 'rgba(90,158,90,0.55)', fillOpacity: 1, weight: 1.5
+    }).addTo(map)
+      .bindPopup(`${thumbHtml}<div class="popup-name">🌿 ${p.name}</div>`, { maxWidth: 200 });
+    osmParkMarkers.push(m);
+  });
+}
+
+// ── Tab / filter controls ─────────────────────────────────────────────────────
+function setTab(cat, e) {
+  e.stopPropagation();
+  activeCategory = cat;
+  osmMode = false;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.cat === cat));
+  document.getElementById('osm-link').style.display = cat === 'bakery' ? 'inline' : 'none';
+  if (cat === 'park') { showOsmParks(); } else { clearOsmParkMarkers(); }
+  plotMarkers(); renderList();
+}
+
+function toggleOpenNow(e) {
+  e.stopPropagation();
+  openNowOnly = !openNowOnly;
+  document.getElementById('open-now-btn').classList.toggle('on', openNowOnly);
+  plotMarkers(); renderList();
+}
+
+async function toggleOsm(e) {
+  e.stopPropagation();
+  if (osmMode) { osmMode = false; document.getElementById('osm-link').textContent = 'All bakeries ↗'; plotMarkers(); renderList(); return; }
+  if (!osmLoaded) {
+    document.getElementById('loading').classList.remove('hidden');
+    try {
+      const q = `[out:json][timeout:30];area["name"="Paris"]["admin_level"="8"]->.p;(node["shop"="bakery"](area.p);node["amenity"="bakery"](area.p););out body;`;
+      const r = await fetch('https://overpass-api.de/api/interpreter', { method:'POST', body:'data='+encodeURIComponent(q) });
+      const d = await r.json();
+      osmItems = (d.elements||[]).filter(e => e.lat && e.lon && e.tags).map(e => ({
+        lat:e.lat, lon:e.lon, cat:'bakery', icon:'🥖',
+        name: e.tags.name || e.tags['name:fr'] || 'Boulangerie',
+        addr: [e.tags['addr:housenumber'],e.tags['addr:street']].filter(Boolean).join(' '),
+        note: '', hours: '', off: [], hrs: [7,20]
+      }));
+      if (userLatLng) osmItems.forEach(b => b.dist = distM([b.lat,b.lon], userLatLng));
+      osmLoaded = true;
+    } catch { document.getElementById('loading').classList.add('hidden'); showStatus('Could not load — check connection'); return; }
+    document.getElementById('loading').classList.add('hidden');
+  }
+  osmMode = true;
+  document.getElementById('osm-link').textContent = '← Curated';
+  plotMarkers(); renderList();
+}
+
+
+// ── Geolocation ───────────────────────────────────────────────────────────────
+function locateMe() {
+  const btn = document.getElementById('locate-btn');
+  if (!navigator.geolocation) { showStatus('Geolocation not supported'); return; }
+  btn.textContent = '⏳ Locating...'; btn.classList.add('locating');
+  if (watchId) navigator.geolocation.clearWatch(watchId);
+  watchId = navigator.geolocation.watchPosition(pos => {
+    btn.textContent = '📡 Tracking'; btn.classList.remove('locating');
+    const { latitude: lat, longitude: lon } = pos.coords;
+    userLatLng = [lat, lon];
+    if (userMarker) { userMarker.setLatLng([lat, lon]); }
+    else { userMarker = L.marker([lat,lon], { icon:userDotIcon(), zIndexOffset:1000 }).addTo(map).bindPopup('You are here'); map.flyTo([lat,lon], 15, { duration:1 }); }
+    ALL_ITEMS.forEach(b => b.dist = distM([b.lat,b.lon], userLatLng));
+    osmItems.forEach(b => b.dist = distM([b.lat,b.lon], userLatLng));
+    // Chime for nearby bakeries
+    if (activeCategory === 'bakery' || activeCategory === 'all') {
+      getDisplayItems().filter(b => b.cat==='bakery' && b.dist < 200).forEach(b => {
+        if (!alertedSet.has(b.name)) {
+          alertedSet.add(b.name); playChime();
+          showStatus(`${b.icon} ${b.name} — ${fmtDist(b.dist)} away!`, 5000);
+        }
+      });
+      alertedSet.forEach(k => { const b = ALL_ITEMS.find(x=>x.name===k); if (b && b.dist > 350) alertedSet.delete(k); });
+    }
+    renderList();
+  }, err => {
+    btn.textContent = '📍 Find Me'; btn.classList.remove('locating');
+    showStatus(err.code === 1 ? 'Location permission denied' : 'Could not get location');
+  }, { enableHighAccuracy:true, maximumAge:5000 });
+}
+
+// ── Weather ───────────────────────────────────────────────────────────────────
+function wxEmoji(c) {
+  if (c===0) return '☀️'; if (c<=2) return '🌤️'; if (c===3) return '☁️';
+  if (c<=48) return '🌫️'; if (c<=55) return '🌦️'; if (c<=67) return '🌧️';
+  if (c<=77) return '🌨️'; if (c<=82) return '🌦️'; return '⛈️';
+}
+function wxDesc(c) {
+  if (c===0) return 'Clear skies'; if (c<=2) return 'Partly cloudy'; if (c===3) return 'Overcast';
+  if (c<=48) return 'Foggy'; if (c<=55) return 'Drizzle'; if (c<=67) return 'Rain';
+  if (c<=77) return 'Snow'; if (c<=82) return 'Showers'; return 'Thunderstorms';
+}
+
+async function fetchWeather() {
+  try {
+    const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=48.8566&longitude=2.3522' +
+      '&current=temperature_2m,weather_code,precipitation_probability' +
+      '&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weathercode,sunrise,sunset' +
+      '&temperature_unit=fahrenheit&timezone=Europe%2FParis&forecast_days=3&past_days=1');
+    const d = await r.json();
+    const cur = d.current, day = d.daily;
+    // past_days=1 + forecast_days=3 → indices: 0=yesterday, 1=today, 2=tomorrow, 3=day-after
+    const code    = cur.weather_code;
+    const temp    = Math.round(cur.temperature_2m);
+    const yHi     = Math.round(day.temperature_2m_max[0]);
+    const hi      = Math.round(day.temperature_2m_max[1]);
+    const lo      = Math.round(day.temperature_2m_min[1]);
+    const precip  = day.precipitation_probability_max[1];
+    const swing   = hi - yHi;
+
+    // Golden hour & sunset
+    const fmtTime = t => t.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit', timeZone:'Europe/Paris' });
+    const sunset  = new Date(day.sunset[1]);
+    const golden  = new Date(sunset - 45 * 60000);
+
+    const pill = document.getElementById('weather-pill');
+    pill.textContent = `${wxEmoji(code)} ${temp}°F`;
+    pill.className = `pill ${code >= 95 ? 'storm' : code >= 61 ? 'rain' : ''}`.trim();
+
+    document.getElementById('wp-emoji').textContent  = wxEmoji(code);
+    document.getElementById('wp-desc').textContent   = wxDesc(code);
+    document.getElementById('wp-temp').textContent   = temp + '°F';
+    document.getElementById('wp-range').textContent  = `H: ${hi}° · L: ${lo}° · Rain: ${precip}%`;
+    document.getElementById('wp-precip').textContent = `🌅 Sunset ${fmtTime(sunset)} · ✨ golden from ${fmtTime(golden)}`;
+
+    // 2-day forecast cards — daily field is 'weathercode' (no underscore) in Open-Meteo
+    const dayCodes = day.weathercode ?? day.weather_code ?? [];
+    const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const d3date = day.time?.[3] ? new Date(day.time[3] + 'T12:00:00') : null;
+    document.getElementById('wp-d1-emoji').textContent = wxEmoji(dayCodes[2] ?? 0);
+    document.getElementById('wp-d1-temp').textContent  = `${Math.round(day.temperature_2m_max[2])}° / ${Math.round(day.temperature_2m_min[2])}°`;
+    document.getElementById('wp-d1-rain').textContent  = `Rain ${day.precipitation_probability_max[2]}%`;
+    document.getElementById('wp-d2-label').textContent = d3date ? dayNames[d3date.getDay()] : '—';
+    document.getElementById('wp-d2-emoji').textContent = wxEmoji(dayCodes[3] ?? 0);
+    document.getElementById('wp-d2-temp').textContent  = day.temperature_2m_max[3] != null ? `${Math.round(day.temperature_2m_max[3])}° / ${Math.round(day.temperature_2m_min[3])}°` : '—';
+    document.getElementById('wp-d2-rain').textContent  = day.precipitation_probability_max[3] != null ? `Rain ${day.precipitation_probability_max[3]}%` : '—';
+
+    // Banner: significant temp swing (≥5°F from yesterday)
+    const banner = document.getElementById('day-banner');
+    if (Math.abs(swing) >= 5 && banner.classList.contains('hidden')) {
+      const dir = swing > 0 ? '📈 Warmer' : '📉 Cooler';
+      document.getElementById('banner-text').innerHTML =
+        `<strong>${dir} today</strong> — ${Math.abs(swing)}°F ${swing > 0 ? 'warmer' : 'cooler'} than yesterday. Pack accordingly — high of ${hi}°F.`;
+      banner.classList.remove('hidden');
+      banner.classList.add('mild');
+    }
+  } catch(e) {}
+}
+
+function toggleWxPanel() {
+  document.getElementById('wx-panel').classList.toggle('open');
+  document.getElementById('wx-overlay').classList.toggle('open');
+}
+
+// ── Day banner ────────────────────────────────────────────────────────────────
+function initDayBanner() {
+  const { day } = parisNow();
+  const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const todayName = dayNames[day];
+  const closedToday = ALL_ITEMS.filter(b => b.off && b.off.includes(day));
+  if (closedToday.length === 0) return;
+
+  const isMonday = day === 1;
+  const banner = document.getElementById('day-banner');
+  const text = document.getElementById('banner-text');
+
+  const names = closedToday.slice(0, 3).map(b => b.name).join(', ');
+  const overflow = closedToday.length > 3 ? ` +${closedToday.length - 3} more` : '';
+
+  if (isMonday) {
+    text.innerHTML = `<strong>It's Monday</strong> — ${closedToday.length} spots on your list are closed today, including ${names}${overflow}.`;
+  } else {
+    text.innerHTML = `<strong>${todayName}</strong> — ${closedToday.length} spots closed today: ${names}${overflow}.`;
+    banner.classList.add('mild');
+  }
+
+  banner.classList.remove('hidden');
+}
+
+// ── Wikipedia thumbnails ──────────────────────────────────────────────────────
+const wikiCache = new Map(); // title → result | null (fetching) | false (no image)
+
+async function fetchThumb(title) {
+  try {
+    // Local asset — no network call needed
+    if (title.startsWith('local:')) {
+      return { src: title.slice(6), pageUrl: '' };
+    }
+    // French or English Wikipedia
+    const lang = title.startsWith('fr:') ? 'fr' : 'en';
+    const t    = title.startsWith('fr:') ? title.slice(3) : title;
+    const r = await fetch(`https://${lang}.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(t)}&prop=pageimages&pithumbsize=200&format=json&origin=*`);
+    const d = await r.json();
+    const page = Object.values(d.query.pages)[0];
+    const thumb = page?.thumbnail;
+    if (!thumb) return null;
+    if (thumb.height > thumb.width * 1.3) return null;
+    return { src: thumb.source, pageUrl: `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(t.replace(/ /g, '_'))}` };
+  } catch { return null; }
+}
+
+function applyThumb(el, result) {
+  if (!document.contains(el)) return;
+  const img = document.createElement('img');
+  img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+  img.alt = '';
+  img.onload = () => {
+    if (!document.contains(el)) return;
+    el.innerHTML = '';
+    if (result.pageUrl) {
+      const a = document.createElement('a');
+      a.href = result.pageUrl;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.style.cssText = 'display:block;width:100%;height:100%;line-height:0;';
+      a.onclick = ev => ev.stopPropagation();
+      a.appendChild(img);
+      el.appendChild(a);
+    } else {
+      el.style.cssText += ';line-height:0;';
+      el.appendChild(img);
+    }
+  };
+  img.src = result.src;
+}
+
+function loadThumbnails() {
+  document.querySelectorAll('.item-icon[data-wiki]').forEach(el => {
+    const title = el.dataset.wiki;
+    if (wikiCache.has(title)) {
+      // Already fetched — apply if we got a result
+      const cached = wikiCache.get(title);
+      if (cached) applyThumb(el, cached);
+      return;
+    }
+    // Mark as in-flight before fetching so re-renders don't double-fetch
+    wikiCache.set(title, null);
+    fetchThumb(title).then(result => {
+      wikiCache.set(title, result || false);
+      if (result) applyThumb(el, result);
+    });
+  });
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+  if (!localStorage.getItem('sw-welcomed')) {
+    navigator.serviceWorker.ready.then(() => {
+      localStorage.setItem('sw-welcomed', '1');
+      setTimeout(() => showStatus('📶 Saved — works offline', 4500), 1800);
+    });
+  }
+}
+if (!navigator.onLine) {
+  setTimeout(() => showStatus('📵 Offline — showing cached spots', 5000), 600);
+}
+window.addEventListener('offline', () => showStatus('📵 Offline — map tiles may be limited', 5000));
+window.addEventListener('online',  () => showStatus('📶 Back online', 3000));
+map.on('popupopen', e => {
+  const el = e.popup.getElement()?.querySelector('.popup-thumb-load');
+  if (!el) return;
+  const title = el.dataset.wiki;
+  fetchThumb(title).then(result => {
+    if (!result) { el.remove(); return; }
+    wikiCache.set(title, result);
+    const img = document.createElement('img');
+    img.style.cssText = 'width:100%;border-radius:7px;margin-bottom:7px;display:block;max-height:100px;object-fit:cover;opacity:0;transition:opacity 0.35s;';
+    img.onload = () => {
+      el.replaceWith(img);
+      requestAnimationFrame(() => { img.style.opacity = '1'; });
+      if (e.popup.isOpen()) e.popup.update();
+    };
+    img.src = result.src;
+  });
+});
+
+plotAirbnb();
+plotMarkers();
+renderList();
+initDayBanner();
+fetchWeather();
+</script>
+</body>
+</html>
