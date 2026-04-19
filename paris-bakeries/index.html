@@ -106,6 +106,7 @@
     .item-card.nearby { border-color: var(--gold); background: rgba(201,168,76,0.06); }
     .item-card.closed-now { opacity: 0.45; }
     .item-card.selected { border-color: rgba(201,168,76,0.55) !important; background: rgba(201,168,76,0.11) !important; opacity: 1 !important; box-shadow: inset 3px 0 0 var(--gold); }
+    .item-rating { font-size: 10px; color: var(--gold); opacity: 0.8; flex-shrink: 0; white-space: nowrap; margin-left: auto; padding-left: 6px; }
 
     .item-icon { font-size: 19px; flex-shrink: 0; margin-top: 1px; line-height: 1; }
     .item-icon.thumbable { width: 40px; height: 40px; border-radius: 7px; overflow: hidden; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; margin-top: 0; flex-shrink: 0; }
@@ -375,29 +376,28 @@ function wikiAll(name) {
 
 // ── Bakeries ──────────────────────────────────────────────────────────────────
 const BAKERIES = [
-  { icon:"🥐", name:"Du Pain et des Idées",     note:"Escargots (pistachio/praline) & chausson aux pommes — a must",      addr:"34 Rue Yves Toudic, 75010",          lat:48.8686, lon:2.3592, off:[0,6], hrs:[6.75,20],   hours:"Mon–Fri 6:45am–8pm · closed weekends", sellsOutHour:10 },
-  { icon:"🍞", name:"Poilâne",                  note:"The miche — massive tangy sourdough round, by slice or whole loaf",  addr:"8 Rue du Cherche-Midi, 75006",       lat:48.8494, lon:2.3331, off:[0],   hrs:[7.25,20.25],hours:"Mon–Sat 7:15am–8:15pm · closed Sun" },
-  { icon:"🍪", name:"Blé Sucré",                note:"Madeleines & croissants — endlessly cited as Paris's finest",        addr:"7 Rue Antoine Vollon, 75012",        lat:48.8509, lon:2.3701, off:[1],   hrs:[7,20],     hours:"Tue–Sun 7am–8pm · closed Mon" },
-  { icon:"🍫", name:"Mamiche",                  note:"Chocolate babka & focaccia — perpetually sold out, arrive early",    addr:"45 Rue Condorcet, 75009",            lat:48.8804, lon:2.3428, off:[0,1], hrs:[9,19],     hours:"Tue–Sat 9am–7pm · closed Sun–Mon", sellsOutHour:12 },
-  { icon:"🥐", name:"Bo&Mie",                   note:"Croissant ranked top 3 in Paris — also try the seeded roll",         addr:"18 Rue de Turbigo, 75002",           lat:48.8635, lon:2.3527, off:[0],   hrs:[7.5,19.5], hours:"Mon–Sat 7:30am–7:30pm · closed Sun" },
-  { icon:"🥖", name:"Maison Landemaine",        note:"Award-winning baguette de tradition — Japanese-French precision",    addr:"26 Rue des Martyrs, 75009",          lat:48.8796, lon:2.3420, off:[0],   hrs:[7,20],     hours:"Mon–Sat 7am–8pm · closed Sun" },
-  { icon:"🌾", name:"Chambelland",              note:"Best gluten-free in Paris — rice & buckwheat sourdough loaves",      addr:"14 Rue Ternaux, 75011",              lat:48.8651, lon:2.3793, off:[2],   hrs:[9,19.5],   hours:"Wed–Mon 9am–7:30pm · closed Tue" },
-  { icon:"🍞", name:"Ten Belles Bread",         note:"Country sourdough loaves & tartines; excellent coffee",              addr:"17 Rue Bréguet, 75011",              lat:48.8576, lon:2.3732, off:[],    hrs:[8,18],     hours:"Mon–Fri 8am–5pm · Sat–Sun 9am–6pm" },
-  { icon:"🥐", name:"Liberté",                 note:"Colorful laminated croissants & milk bread — Benoît Castel",         addr:"39 Rue des Vinaigriers, 75010",      lat:48.8687, lon:2.3614, off:[1],   hrs:[8,20],     hours:"Tue–Sun 8am–8pm · closed Mon" },
-  { icon:"🌾", name:"Sain Boulangerie",         note:"Whole grain & ancient grain loaves — sells out early, go before noon", addr:"15 Rue Marie et Louise, 75010",    lat:48.8703, lon:2.3656, off:[1,2], hrs:[8,14],     hours:"Wed–Sun 8am–2pm · closed Mon–Tue", sellsOutHour:11 },
-  { icon:"🥐", name:"Utopie",                  note:"Flavored croissants (matcha, sesame, hazelnut) that actually deliver", addr:"20 Rue Jean-Pierre Timbaud, 75011", lat:48.8637, lon:2.3769, off:[0,1], hrs:[8,20],     hours:"Tue–Sat 8am–8pm · closed Sun–Mon" },
-  { icon:"🥖", name:"Pain Pain",               note:"Baguette & croissant both ranked in city's top tier repeatedly",     addr:"88 Rue des Martyrs, 75018",          lat:48.8844, lon:2.3384, off:[1],   hrs:[7,20],     hours:"Tue–Sun 7am–8pm · closed Mon" },
-  { icon:"🍮", name:"Benoît Castel",            note:"Canelés & raspberry tart — neighborhood gem in Ménilmontant",        addr:"150 Rue de Ménilmontant, 75020",     lat:48.8668, lon:2.3942, off:[1],   hrs:[8,20],     hours:"Tue–Sun 8am–8pm · closed Mon" },
-  { icon:"🍞", name:"Gontran Cherrier",         note:"Inventive flavored loaves — squid ink, curry, seaweed baguettes",    addr:"22 Rue Caulaincourt, 75018",         lat:48.8849, lon:2.3349, off:[0],   hrs:[7,20],     hours:"Mon–Sat 7am–8pm · closed Sun" },
-  { icon:"🧈", name:"Vandermeersch",            note:"Kouign-amann — the definitive Paris version, worth the trip east",   addr:"278 Avenue Daumesnil, 75012",        lat:48.8411, lon:2.3953, off:[1,2], hrs:[9,19.5],   hours:"Wed–Sun 9am–7:30pm · closed Mon–Tue", sellsOutHour:13 },
-  { icon:"🥖", name:"Éric Kayser",             note:"Baguette Monge — award-winning signature, organic levain",           addr:"8 Rue Monge, 75005",                 lat:48.8512, lon:2.3520, off:[],    hrs:[7,20.5],   hours:"Daily 7am–8:30pm" },
-  { icon:"🍋", name:"Des Gâteaux et du Pain",  note:"Tarte au citron & tarte Tatin — Claire Damon's elegant pâtisserie",  addr:"89 Rue du Bac, 75007",               lat:48.8543, lon:2.3276, off:[2],   hrs:[9,19.5],   hours:"Wed–Mon 9am–7:30pm · closed Tue" },
-  { icon:"🥖", name:"Le Grenier à Pain",       note:"Grand Prix de la Baguette winner — baguette is the whole point",     addr:"38 Rue des Abbesses, 75018",         lat:48.8842, lon:2.3375, off:[1],   hrs:[7.5,20],   hours:"Tue–Sun 7:30am–8pm · closed Mon" },
-  { icon:"🥖", name:"Maison d'Isabelle",       note:"Best baguette de Paris 2018 & 2019 (Grand Prix winner)",             addr:"47bis Bd Saint-Germain, 75005",      lat:48.8514, lon:2.3476, off:[0],   hrs:[7,20],     hours:"Mon–Sat 7am–8pm · Sun until 1pm" },
-  { icon:"🍰", name:"Laurent Duchêne",         note:"Millefeuille & tarte au citron — MOF award-winning precision",       addr:"2 Rue Wurtz, 75013",                 lat:48.8274, lon:2.3500, off:[0,1], hrs:[9,19.5],   hours:"Tue–Sat 9am–7:30pm · closed Sun–Mon" },
-  { icon:"☕", name:"Bread & Roses",           note:"Scones, quiche & pastries — relaxed café near Luxembourg",           addr:"7 Rue de Fleurus, 75006",            lat:48.8469, lon:2.3331, off:[0],   hrs:[8,19],     hours:"Mon–Sat 8am–7pm · closed Sun" },
-  { icon:"🥐", name:"Boulangerie Julien",      note:"Croissant & pain au chocolat — reliable classic near the Louvre",    addr:"75 Rue Saint-Honoré, 75001",         lat:48.8601, lon:2.3443, off:[0],   hrs:[7,20.5],   hours:"Mon–Sat 7am–8:30pm · closed Sun" },
-  { icon:"🌿", name:"Terroirs d'Avenir",       note:"Bakery of Paris's top heritage-produce supplier — exceptional bread", addr:"7 Rue du Nil, 75002",               lat:48.8641, lon:2.3484, off:[0,1], hrs:[8,19.5],   hours:"Tue–Sat 8am–7:30pm · closed Sun–Mon" },
+  { icon:"🥐", name:"Du Pain et des Idées",     note:"Escargots (pistachio/praline) & chausson aux pommes — a must",        addr:"34 Rue Yves Toudic, 75010",          lat:48.8686, lon:2.3592, off:[0,6], hrs:[6.75,20],   hours:"Mon–Fri 6:45am–8pm · closed weekends", sellsOutHour:10, rating:4.3, reviews:"3,900" },
+  { icon:"🍞", name:"Poilâne",                  note:"The miche — massive tangy sourdough round, by slice or whole loaf",    addr:"8 Rue du Cherche-Midi, 75006",       lat:48.8494, lon:2.3331, off:[0],   hrs:[7.25,20.25],hours:"Mon–Sat 7:15am–8:15pm · closed Sun",                    rating:4.1, reviews:"700" },
+  { icon:"🍪", name:"Blé Sucré",                note:"Madeleines & croissants — endlessly cited as Paris's finest",          addr:"7 Rue Antoine Vollon, 75012",        lat:48.8509, lon:2.3701, off:[1],   hrs:[7,20],     hours:"Tue–Sun 7am–8pm · closed Mon",                          rating:4.4, reviews:"1,800" },
+  { icon:"🍫", name:"Mamiche",                  note:"Chocolate babka & focaccia — perpetually sold out, arrive early",      addr:"45 Rue Condorcet, 75009",            lat:48.8804, lon:2.3428, off:[0,1], hrs:[9,19],     hours:"Tue–Sat 9am–7pm · closed Sun–Mon", sellsOutHour:12,     rating:4.6, reviews:"2,600" },
+  { icon:"🥐", name:"Bo&Mie",                   note:"Croissant ranked top 3 in Paris — also try the seeded roll",           addr:"18 Rue de Turbigo, 75002",           lat:48.8635, lon:2.3527, off:[0],   hrs:[7.5,19.5], hours:"Mon–Sat 7:30am–7:30pm · closed Sun",                    rating:4.5, reviews:"1,200" },
+  { icon:"🥖", name:"Maison Landemaine",        note:"Award-winning baguette de tradition — Japanese-French precision",      addr:"26 Rue des Martyrs, 75009",          lat:48.8796, lon:2.3420, off:[0],   hrs:[7,20],     hours:"Mon–Sat 7am–8pm · closed Sun",                          rating:4.2, reviews:"1,300" },
+  { icon:"🌾", name:"Chambelland",              note:"Best gluten-free in Paris — rice & buckwheat sourdough loaves",        addr:"14 Rue Ternaux, 75011",              lat:48.8651, lon:2.3793, off:[2],   hrs:[9,19.5],   hours:"Wed–Mon 9am–7:30pm · closed Tue",                       rating:4.4, reviews:"2,500" },
+  { icon:"🍞", name:"Ten Belles Bread",         note:"Country sourdough loaves & tartines; excellent coffee",                addr:"17 Rue Bréguet, 75011",              lat:48.8576, lon:2.3732, off:[],    hrs:[8,18],     hours:"Mon–Fri 8am–5pm · Sat–Sun 9am–6pm",                     rating:4.4, reviews:"1,300" },
+  { icon:"🥐", name:"Liberté",                 note:"Colorful laminated croissants & milk bread — Benoît Castel",           addr:"39 Rue des Vinaigriers, 75010",      lat:48.8687, lon:2.3614, off:[1],   hrs:[8,20],     hours:"Tue–Sun 8am–8pm · closed Mon",                          rating:4.2, reviews:"800" },
+  { icon:"🌾", name:"Sain Boulangerie",         note:"Whole grain & ancient grain loaves — sells out early, go before noon", addr:"15 Rue Marie et Louise, 75010",      lat:48.8703, lon:2.3656, off:[1,2], hrs:[8,14],     hours:"Wed–Sun 8am–2pm · closed Mon–Tue", sellsOutHour:11,     rating:4.3, reviews:"400" },
+  { icon:"🥐", name:"Utopie",                  note:"Flavored croissants (matcha, sesame, hazelnut) that actually deliver", addr:"20 Rue Jean-Pierre Timbaud, 75011",  lat:48.8637, lon:2.3769, off:[0,1], hrs:[8,20],     hours:"Tue–Sat 8am–8pm · closed Sun–Mon",                      rating:4.5, reviews:"5,000" },
+  { icon:"🥖", name:"Pain Pain",               note:"Baguette & croissant both ranked in city's top tier repeatedly",       addr:"88 Rue des Martyrs, 75018",          lat:48.8844, lon:2.3384, off:[1],   hrs:[7,20],     hours:"Tue–Sun 7am–8pm · closed Mon",                          rating:4.4, reviews:"1,700" },
+  { icon:"🍮", name:"Benoît Castel",            note:"Canelés & raspberry tart — neighborhood gem in Ménilmontant",          addr:"150 Rue de Ménilmontant, 75020",     lat:48.8668, lon:2.3942, off:[1],   hrs:[8,20],     hours:"Tue–Sun 8am–8pm · closed Mon",                          rating:4.1, reviews:"300" },
+  { icon:"🧈", name:"Vandermeersch",            note:"Kouign-amann — the definitive Paris version, worth the trip east",     addr:"278 Avenue Daumesnil, 75012",        lat:48.8411, lon:2.3953, off:[1,2], hrs:[9,19.5],   hours:"Wed–Sun 9am–7:30pm · closed Mon–Tue", sellsOutHour:13,   rating:4.3, reviews:"500" },
+  { icon:"🥖", name:"Éric Kayser",             note:"Baguette Monge — award-winning signature, organic levain",             addr:"8 Rue Monge, 75005",                 lat:48.8512, lon:2.3520, off:[],    hrs:[7,20.5],   hours:"Daily 7am–8:30pm",                                      rating:4.2, reviews:"800" },
+  { icon:"🍋", name:"Des Gâteaux et du Pain",  note:"Tarte au citron & tarte Tatin — Claire Damon's elegant pâtisserie",    addr:"89 Rue du Bac, 75007",               lat:48.8543, lon:2.3276, off:[2],   hrs:[9,19.5],   hours:"Wed–Mon 9am–7:30pm · closed Tue",                       rating:4.3, reviews:"400" },
+  { icon:"🥖", name:"Le Grenier à Pain",       note:"Grand Prix de la Baguette winner — baguette is the whole point",       addr:"38 Rue des Abbesses, 75018",         lat:48.8842, lon:2.3375, off:[1],   hrs:[7.5,20],   hours:"Tue–Sun 7:30am–8pm · closed Mon",                       rating:4.4, reviews:"1,600" },
+  { icon:"🥖", name:"Maison d'Isabelle",       note:"Best baguette de Paris 2018 & 2019 (Grand Prix winner)",               addr:"47bis Bd Saint-Germain, 75005",      lat:48.8514, lon:2.3476, off:[0],   hrs:[7,20],     hours:"Mon–Sat 7am–8pm · Sun until 1pm",                       rating:4.6, reviews:"4,000" },
+  { icon:"🍰", name:"Laurent Duchêne",         note:"Millefeuille & tarte au citron — MOF award-winning precision",         addr:"2 Rue Wurtz, 75013",                 lat:48.8274, lon:2.3500, off:[0,1], hrs:[9,19.5],   hours:"Tue–Sat 9am–7:30pm · closed Sun–Mon",                   rating:4.3, reviews:"300" },
+  { icon:"☕", name:"Bread & Roses",           note:"Scones, quiche & pastries — relaxed café near Luxembourg",             addr:"7 Rue de Fleurus, 75006",            lat:48.8469, lon:2.3331, off:[0],   hrs:[8,19],     hours:"Mon–Sat 8am–7pm · closed Sun",                          rating:4.0, reviews:"900" },
+  { icon:"🥐", name:"Boulangerie Julien",      note:"Croissant & pain au chocolat — reliable classic near the Louvre",      addr:"75 Rue Saint-Honoré, 75001",         lat:48.8601, lon:2.3443, off:[0],   hrs:[7,20.5],   hours:"Mon–Sat 7am–8:30pm · closed Sun",                       rating:4.3, reviews:"350" },
+  { icon:"🌿", name:"Terroirs d'Avenir",       note:"Bakery of Paris's top heritage-produce supplier — exceptional bread",   addr:"7 Rue du Nil, 75002",               lat:48.8641, lon:2.3484, off:[0,1], hrs:[8,19.5],   hours:"Tue–Sat 8am–7:30pm · closed Sun–Mon",                   rating:4.5, reviews:"500" },
 ];
 
 // ── Parks ─────────────────────────────────────────────────────────────────────
@@ -413,13 +413,13 @@ const PARKS = [
 
 // ── Markets ───────────────────────────────────────────────────────────────────
 const MARKETS = [
-  { icon:"🥦", name:"Rue Montorgueil",         note:"Best food street in Paris — fishmongers, fromageries, cafés",         addr:"Rue Montorgueil, 75002",             lat:48.8635, lon:2.3487, off:[], hrs:[7,20],      hours:"Daily 7am–8pm · some shops close Sun PM" },
-  { icon:"🏚️", name:"Marché des Enfants Rouges",note:"Oldest covered market in Paris (1615) — incredible food stalls",     addr:"39 Rue de Bretagne, 75003",          lat:48.8618, lon:2.3619, off:[1], hrs:[8.5,20],   hours:"Tue–Sat 8:30am–7:30pm · Sun 8:30am–2pm · closed Mon" },
-  { icon:"🧺", name:"La Grande Épicerie",       note:"World-class food hall — the best selection of French products",       addr:"38 Rue de Sèvres, 75007",            lat:48.8512, lon:2.3253, off:[], hrs:[8.5,21],    hours:"Mon–Sat 8:30am–9pm · Sun 10am–7pm" },
-  { icon:"🏬", name:"Le Bon Marché",            note:"Iconic luxury department store — beautiful building to browse",       addr:"24 Rue de Sèvres, 75007",            lat:48.8510, lon:2.3259, off:[], hrs:[10,19.75],  hours:"Mon–Sat 10am–7:45pm · Sun 11am–7:45pm" },
-  { icon:"🥩", name:"Les Enfants du Marché",    note:"Lively weekend market — great vendors, buzzy atmosphere",             addr:"39 Bd Beaumarchais, 75003",          lat:48.8578, lon:2.3678, off:[1,2,3,4,5], hrs:[9,18], hours:"Sat–Sun only" },
-  { icon:"🍋", name:"Marché d'Aligre",          note:"Best authentic Paris market — local, affordable, great produce",      addr:"Place d'Aligre, 75012",              lat:48.8504, lon:2.3710, off:[1], hrs:[7.5,13],   hours:"Tue–Sun 7:30am–1pm · closed Mon" },
-  { icon:"🛒", name:"Marché Bastille",          note:"Huge outdoor market Thu & Sun — one of the best in the city",         addr:"Bd Richard-Lenoir, 75011",           lat:48.8533, lon:2.3698, off:[0,1,2,3,5,6], hrs:[7,14.5], hours:"Thu 7am–2:30pm · Sun 7am–3pm" },
+  { icon:"🥦", name:"Rue Montorgueil",          note:"Best food street in Paris — fishmongers, fromageries, cafés",          addr:"Rue Montorgueil, 75002",             lat:48.8635, lon:2.3487, off:[], hrs:[7,20],          hours:"Daily 7am–8pm · some shops close Sun PM",             rating:4.4, reviews:"2,000" },
+  { icon:"🏚️", name:"Marché des Enfants Rouges",note:"Oldest covered market in Paris (1615) — incredible food stalls",      addr:"39 Rue de Bretagne, 75003",          lat:48.8618, lon:2.3619, off:[1], hrs:[8.5,20],        hours:"Tue–Sat 8:30am–7:30pm · Sun 8:30am–2pm · closed Mon", rating:4.4, reviews:"750" },
+  { icon:"🧺", name:"La Grande Épicerie",        note:"World-class food hall — the best selection of French products",        addr:"38 Rue de Sèvres, 75007",            lat:48.8512, lon:2.3253, off:[], hrs:[8.5,21],        hours:"Mon–Sat 8:30am–9pm · Sun 10am–7pm",                   rating:4.4, reviews:"900" },
+  { icon:"🏬", name:"Le Bon Marché",             note:"Iconic luxury department store — beautiful building to browse",        addr:"24 Rue de Sèvres, 75007",            lat:48.8510, lon:2.3259, off:[], hrs:[10,19.75],      hours:"Mon–Sat 10am–7:45pm · Sun 11am–7:45pm",               rating:4.3, reviews:"2,500" },
+  { icon:"🥩", name:"Les Enfants du Marché",     note:"Lively weekend market — great vendors, buzzy atmosphere",              addr:"39 Bd Beaumarchais, 75003",          lat:48.8578, lon:2.3678, off:[1,2,3,4,5], hrs:[9,18], hours:"Sat–Sun only",                                        rating:4.3, reviews:"1,800" },
+  { icon:"🍋", name:"Marché d'Aligre",           note:"Best authentic Paris market — local, affordable, great produce",       addr:"Place d'Aligre, 75012",              lat:48.8504, lon:2.3710, off:[1], hrs:[7.5,13],       hours:"Tue–Sun 7:30am–1pm · closed Mon",                     rating:4.4, reviews:"1,500" },
+  { icon:"🛒", name:"Marché Bastille",           note:"Huge outdoor market Thu & Sun — one of the best in the city",          addr:"Bd Richard-Lenoir, 75011",           lat:48.8533, lon:2.3698, off:[0,1,2,3,5,6], hrs:[7,14.5], hours:"Thu 7am–2:30pm · Sun 7am–3pm",                    rating:4.5, reviews:"800" },
 ];
 
 // ── Curiosities ───────────────────────────────────────────────────────────────
@@ -578,7 +578,9 @@ function popupHTML(b) {
   const thumbHtml = cached
     ? `<img src="${cached.src}" style="width:100%;border-radius:7px;margin-bottom:7px;display:block;max-height:100px;object-fit:cover;">`
     : wikiTitle ? `<div class="popup-thumb-load" data-name="${b.name}" data-wiki="${wikiTitle}"></div>` : '';
+  const ratingHtml = b.rating ? `<div style="font-size:11px;color:var(--gold);opacity:0.85;margin-top:3px;">${b.rating}★${b.reviews ? `<span style="opacity:0.5;font-size:10px;"> · ${b.reviews} reviews</span>` : ''}</div>` : '';
   return `${thumbHtml}<div class="popup-name">${b.icon||'📍'} ${b.name}${badge}</div>
+    ${ratingHtml}
     ${b.note ? `<div class="popup-note">${b.note}</div>` : ''}
     ${b.hours ? `<div class="popup-hours">🕐 ${b.hours}</div>` : ''}
     ${b.addr ? `<div class="popup-addr">${b.addr}</div>` : ''}
@@ -636,7 +638,7 @@ function renderList() {
     return `<div class="item-card ${nearby?'nearby':''} ${closedClass}" data-key="${b.lat},${b.lon}" onclick="selectCard(this,${b.lat},${b.lon})">
       <div class="item-icon${wikiTitle?' thumbable':''}"${wikiTitle?` data-wiki="${wikiTitle}"`:''}>${b.icon||'📍'}</div>
       <div class="item-info">
-        <div class="item-top"><div class="item-name">${b.name}</div>${badgeHtml}${selloutHtml}</div>
+        <div class="item-top"><div class="item-name">${b.name}</div>${badgeHtml}${selloutHtml}${b.rating ? `<span class="item-rating">${b.rating}★</span>` : ''}</div>
         ${b.note ? `<div class="item-note">${b.note}</div>` : ''}
         ${b.hours ? `<div class="item-hours">🕐 ${b.hours}</div>` : ''}
       </div>
@@ -1079,6 +1081,7 @@ function renderStorySlide() {
     : open === false
     ? `<span style="color:var(--red);font-weight:700">● Closed</span>`
     : '';
+  if (b.rating) metaEl.innerHTML += `<span style="color:var(--gold);font-weight:600">${b.rating}★</span><span style="color:rgba(245,240,232,0.35);font-size:11px">${b.reviews ? b.reviews+' reviews' : ''}</span>`;
   if (b.hours) metaEl.innerHTML += `<span style="color:rgba(245,240,232,0.45)">${b.hours}</span>`;
 
   // Image
