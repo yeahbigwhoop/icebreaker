@@ -885,7 +885,7 @@ async function fetchThumb(title) {
   try {
     // Local asset — no network call needed
     if (title.startsWith('local:')) {
-      return { src: encodeURI(title.slice(6)), pageUrl: '' };
+      return { src: title.slice(6), pageUrl: '' };
     }
     // French or English Wikipedia
     const lang = title.startsWith('fr:') ? 'fr' : 'en';
