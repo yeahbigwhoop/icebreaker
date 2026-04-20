@@ -1,4 +1,4 @@
-const CACHE = 'paris-guide-v9';
+const CACHE = 'paris-guide-v10';
 
 const SHELL = [
   '/',
