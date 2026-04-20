@@ -900,14 +900,23 @@ async function fetchThumb(title) {
   } catch { return null; }
 }
 
-function applyThumb(el, result) {
-  if (!document.contains(el)) return;
+// Find the current live card icon element for a given wiki title.
+// The drawer list is rebuilt on every renderList() call, so captured
+// element references go stale — always re-query before touching the DOM.
+function findLiveThumbEl(title) {
+  return Array.from(document.querySelectorAll('.item-icon[data-wiki]'))
+    .find(el => el.dataset.wiki === title) || null;
+}
+
+function applyThumb(el, result, title) {
   const img = document.createElement('img');
   img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
   img.alt = '';
   img.onload = () => {
-    if (!document.contains(el)) return;
-    el.innerHTML = '';
+    // Re-find the live element — the list may have been rebuilt since img.src was set
+    const target = (title && findLiveThumbEl(title)) || el;
+    if (!document.contains(target)) return;
+    target.innerHTML = '';
     if (result.pageUrl) {
       const a = document.createElement('a');
       a.href = result.pageUrl;
@@ -916,10 +925,10 @@ function applyThumb(el, result) {
       a.style.cssText = 'display:block;width:100%;height:100%;line-height:0;';
       a.onclick = ev => ev.stopPropagation();
       a.appendChild(img);
-      el.appendChild(a);
+      target.appendChild(a);
     } else {
-      el.style.cssText += ';line-height:0;';
-      el.appendChild(img);
+      target.style.cssText += ';line-height:0;';
+      target.appendChild(img);
     }
   };
   img.src = result.src;
@@ -931,14 +940,18 @@ function loadThumbnails() {
     if (wikiCache.has(title)) {
       // Already fetched — apply if we got a result
       const cached = wikiCache.get(title);
-      if (cached) applyThumb(el, cached);
+      // null means in-flight: the pending .then() will re-query and apply
+      if (cached) applyThumb(el, cached, title);
       return;
     }
-    // Mark as in-flight before fetching so re-renders don't double-fetch
+    // Mark as in-flight before fetching so concurrent re-renders don't double-fetch
     wikiCache.set(title, null);
     fetchThumb(title).then(result => {
       wikiCache.set(title, result || false);
-      if (result) applyThumb(el, result);
+      if (!result) return;
+      // Re-find the live element — list may have re-rendered while fetch was pending
+      const liveEl = findLiveThumbEl(title) || el;
+      applyThumb(liveEl, result, title);
     });
   });
 }
