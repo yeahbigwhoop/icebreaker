@@ -369,6 +369,9 @@ function wikiFirst(name) {
   const v = WIKI[name];
   return Array.isArray(v) ? v[0] : (v || '');
 }
+function escAttr(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+}
 function wikiAll(name) {
   const v = WIKI[name];
   return Array.isArray(v) ? v : (v ? [v] : []);
@@ -581,7 +584,7 @@ function popupHTML(b) {
   const cached = wikiTitle ? wikiCache.get(wikiTitle) : null;
   const thumbHtml = cached
     ? `<img src="${cached.src}" style="width:100%;border-radius:7px;margin-bottom:7px;display:block;max-height:100px;object-fit:cover;">`
-    : wikiTitle ? `<div class="popup-thumb-load" data-name="${b.name}" data-wiki="${wikiTitle}"></div>` : '';
+    : wikiTitle ? `<div class="popup-thumb-load" data-name="${escAttr(b.name)}" data-wiki="${escAttr(wikiTitle)}"></div>` : '';
   const ratingHtml = b.rating ? `<div style="font-size:11px;color:var(--gold);opacity:0.85;margin-top:3px;">${b.rating}★${b.reviews ? `<span style="opacity:0.5;font-size:10px;"> · ${b.reviews} reviews</span>` : ''}</div>` : '';
   return `${thumbHtml}<div class="popup-name">${b.icon||'📍'} ${b.name}${badge}</div>
     ${ratingHtml}
@@ -640,7 +643,7 @@ function renderList() {
     const distStr = b.dist != null ? fmtDist(b.dist) : '';
     const wikiTitle = wikiFirst(b.name);
     return `<div class="item-card ${nearby?'nearby':''} ${closedClass}" data-key="${b.lat},${b.lon}" onclick="selectCard(this,${b.lat},${b.lon})">
-      <div class="item-icon${wikiTitle?' thumbable':''}"${wikiTitle?` data-wiki="${wikiTitle}"`:''}>${b.icon||'📍'}</div>
+      <div class="item-icon${wikiTitle?' thumbable':''}"${wikiTitle?` data-wiki="${escAttr(wikiTitle)}"`:''}>${b.icon||'📍'}</div>
       <div class="item-info">
         <div class="item-top"><div class="item-name">${b.name}</div>${badgeHtml}${selloutHtml}${b.rating ? `<span class="item-rating">${b.rating}★</span>` : ''}</div>
         ${b.note ? `<div class="item-note">${b.note}</div>` : ''}
@@ -883,9 +886,14 @@ const wikiCache = new Map(); // title → result | null (fetching) | false (no i
 
 async function fetchThumb(title) {
   try {
-    // Local asset — no network call needed
+    // Local asset — fetch as blob so URL encoding of accented/spaced filenames
+    // is handled entirely by the browser's fetch() internals, not by us.
     if (title.startsWith('local:')) {
-      return { src: title.slice(6), pageUrl: '' };
+      const resp = await fetch(title.slice(6));
+      if (!resp.ok) return null;
+      const blob = await resp.blob();
+      if (!blob.size) return null;
+      return { src: URL.createObjectURL(blob), pageUrl: '' };
     }
     // French or English Wikipedia
     const lang = title.startsWith('fr:') ? 'fr' : 'en';
