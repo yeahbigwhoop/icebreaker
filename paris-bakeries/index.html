@@ -886,10 +886,11 @@ const wikiCache = new Map(); // title → result | null (fetching) | false (no i
 
 async function fetchThumb(title) {
   try {
-    // Local asset — fetch as blob so URL encoding of accented/spaced filenames
-    // is handled entirely by the browser's fetch() internals, not by us.
+    // Local asset — fetch with a properly encoded URL so spaces/accents in
+    // filenames are never an issue, then hand back a blob: URL for img.src.
     if (title.startsWith('local:')) {
-      const resp = await fetch(title.slice(6));
+      const path = title.slice(6);
+      const resp = await fetch(encodeURI(path));
       if (!resp.ok) return null;
       const blob = await resp.blob();
       if (!blob.size) return null;
