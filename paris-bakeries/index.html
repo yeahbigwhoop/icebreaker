@@ -297,25 +297,25 @@ const AIRBNB = { lat: 48.8692, lon: 2.3444, addr: "8 Rue Saint-Marc, 75002" };
 // ── Wikipedia thumbnail lookup (name → article title) ─────────────────────────
 const WIKI = {
   // Bakeries — local assets + Wikipedia fallback for Éric Kayser
-  "Du Pain et des Idées":          "local:assets/du pain et des idées.png",
-  "Poilâne":                       "local:assets/Boulangerie Poilâne.png",
-  "Mamiche":                       ["local:assets/Mamiche.png", "local:assets/Mamiche 2 .png"],
-  "Bo&Mie":                        "local:assets/Bo&Mie.png",
-  "Maison Landemaine":             "local:assets/Maison Landemaine.png",
-  "Gontran Cherrier":              "local:assets/gontran cherrier.png",
-  "Le Grenier à Pain":             ["local:assets/le grenier à pain.png", "local:assets/le grenier à pain 2.png"],
+  "Du Pain et des Idées":          "local:assets/du-pain-et-des-idees.png",
+  "Poilâne":                       "local:assets/boulangerie-poilane.png",
+  "Mamiche":                       ["local:assets/mamiche.png", "local:assets/mamiche-2.png"],
+  "Bo&Mie":                        "local:assets/bo-et-mie.png",
+  "Maison Landemaine":             "local:assets/maison-landemaine.png",
+  "Gontran Cherrier":              "local:assets/gontran-cherrier.png",
+  "Le Grenier à Pain":             ["local:assets/le-grenier-a-pain.png", "local:assets/le-grenier-a-pain-2.png"],
   "Éric Kayser":                   "Éric Kayser",
-  "Blé Sucré":                     "local:assets/Ble Sucre.png",
-  "Terroirs d'Avenir":             "local:assets/Boulangerie Terroir d'Avenir.png",
-  "Utopie":                        "local:assets/Boulangerie Utopie.png",
-  "Chambelland":                   "local:assets/Chambelland Boulangerie.png",
-  "Sain Boulangerie":              ["local:assets/Sain Boulangerie.png", "local:assets/Sain Boulangerie 2.png"],
-  "Ten Belles Bread":              "local:assets/Ten Belles Bread.png",
-  "Vandermeersch":                 "local:assets/Vandermeersch.png",
-  "Liberté":                       ["local:assets/LIBERTÉ.png", "local:assets/LIBERTÉ 2.png"],
-  "Des Gâteaux et du Pain":        "local:assets/Des Gâteaux et du Pain.png",
-  "Bread & Roses":                 ["local:assets/Bread and Roses.png", "local:assets/Bread and Roses 2.png"],
-  "Boulangerie Julien":            ["local:assets/La Boulangerie Julien.png", "local:assets/La Boulangerie Julien 2.png"],
+  "Blé Sucré":                     "local:assets/ble-sucre.png",
+  "Terroirs d'Avenir":             "local:assets/boulangerie-terroir-davenir.png",
+  "Utopie":                        "local:assets/boulangerie-utopie.png",
+  "Chambelland":                   "local:assets/chambelland-boulangerie.png",
+  "Sain Boulangerie":              ["local:assets/sain-boulangerie.png", "local:assets/sain-boulangerie-2.png"],
+  "Ten Belles Bread":              "local:assets/ten-belles-bread.png",
+  "Vandermeersch":                 "local:assets/vandermeersch.png",
+  "Liberté":                       ["local:assets/liberte.png", "local:assets/liberte-2.png"],
+  "Des Gâteaux et du Pain":        "local:assets/des-gateaux-et-du-pain.png",
+  "Bread & Roses":                 ["local:assets/bread-and-roses.png", "local:assets/bread-and-roses-2.png"],
+  "Boulangerie Julien":            ["local:assets/la-boulangerie-julien.png", "local:assets/la-boulangerie-julien-2.png"],
   // Parks
   "Jardin du Luxembourg":      "Jardin du Luxembourg",
   "Jardin des Tuileries":      "Tuileries Garden",
@@ -886,11 +886,11 @@ const wikiCache = new Map(); // title → result | null (fetching) | false (no i
 
 async function fetchThumb(title) {
   try {
-    // Local asset — fetch with a properly encoded URL so spaces/accents in
-    // filenames are never an issue, then hand back a blob: URL for img.src.
+    // Local asset — all filenames are ASCII/URL-safe; fetch as blob so
+    // img.src works regardless of base URL or service worker routing.
     if (title.startsWith('local:')) {
       const path = title.slice(6);
-      const resp = await fetch(encodeURI(path));
+      const resp = await fetch(path);
       if (!resp.ok) return null;
       const blob = await resp.blob();
       if (!blob.size) return null;
