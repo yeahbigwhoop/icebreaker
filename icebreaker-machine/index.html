@@ -175,6 +175,21 @@
       white-space: nowrap;
     }
     .top-link:hover { color: rgba(0,0,0,0.75); }
+    .top-pipe {
+      color: rgba(0,0,0,0.15);
+      font-size: 10px;
+      font-family: 'DM Sans', sans-serif;
+      user-select: none;
+    }
+    #promptCount {
+      display: inline-block;
+      font-size: 8px;
+      font-weight: 400;
+      letter-spacing: 0;
+      opacity: 0.7;
+      margin-left: 4px;
+      vertical-align: super;
+    }
 
     /* Submit overlay */
     #submitOverlay {
@@ -258,7 +273,8 @@
   <canvas id="slingshotCanvas"></canvas>
 
   <div id="topLinks">
-    <button class="top-link" id="submitBtn">Add Prompt</button>
+    <button class="top-link" id="submitBtn">Add Prompt<span id="promptCount"></span></button>
+    <span class="top-pipe">|</span>
     <button class="top-link" id="classicsBtn">SDG Classics</button>
     <button class="top-link" id="askClaudeBtn">Ask Claude</button>
   </div>
@@ -978,11 +994,17 @@
     let activeUserPrompt = null;
     const doneBtn = document.getElementById('doneBtn');
 
+    function updatePromptCount() {
+      const el = document.getElementById('promptCount');
+      el.textContent = userPrompts.length > 0 ? userPrompts.length : '';
+    }
+
     async function loadUserPrompts() {
       try {
         const res = await fetch('/api/user-prompts');
         if (res.ok) { const d = await res.json(); userPrompts = d.prompts || []; }
       } catch {}
+      updatePromptCount();
     }
     async function loadGraduatedClassics() {
       try {
@@ -1035,6 +1057,7 @@
         if (res.ok) {
           const { count } = await res.json();
           userPrompts.push(text);
+          updatePromptCount();
           submitFeedback.textContent = `saved — ${count} prompt${count !== 1 ? 's' : ''} in the pool`;
           setTimeout(() => submitOverlay.classList.remove('open'), 1600);
         } else {
@@ -1050,6 +1073,7 @@
       const text = activeUserPrompt;
       activeUserPrompt = null;
       userPrompts = userPrompts.filter(p => p !== text);
+      updatePromptCount();
       graduatedClassics.push(text);
       classicsQueue = []; // reset classics queue so it picks up the new addition
       doneBtn.classList.add('struck');
