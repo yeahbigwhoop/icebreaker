@@ -152,6 +152,85 @@
     }
     #classicsBtn:hover { color: rgba(0,0,0,0.75); }
 
+    /* Submit prompt — mirrored from SDG Classics, bottom-left */
+    #submitBtn {
+      position: fixed;
+      bottom: 48px;
+      left: -22px;
+      transform: rotate(90deg);
+      transform-origin: center center;
+      background: none;
+      border: none;
+      padding: 0;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(0,0,0,0.35);
+      cursor: pointer;
+      z-index: 30;
+      pointer-events: all;
+      transition: color 0.2s ease;
+      white-space: nowrap;
+    }
+    #submitBtn:hover { color: rgba(0,0,0,0.75); }
+
+    /* Submit overlay */
+    #submitOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(245,241,234,0.88);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    #submitOverlay.open { opacity: 1; pointer-events: all; }
+    #submitForm {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      width: min(520px, 88vw);
+    }
+    #submitLabel {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(0,0,0,0.35);
+    }
+    #submitInput {
+      width: 100%;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 24px;
+      font-weight: 300;
+      color: #111;
+      background: none;
+      border: none;
+      border-bottom: 1px solid rgba(0,0,0,0.2);
+      padding: 10px 0;
+      outline: none;
+      text-align: center;
+      letter-spacing: -0.01em;
+    }
+    #submitInput::placeholder { color: rgba(0,0,0,0.25); }
+    #submitFeedback {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(0,0,0,0.4);
+      min-height: 14px;
+    }
+
     /* Canvas overlay — power arc + barrier line only */
     #slingshotCanvas {
       position: fixed;
@@ -178,6 +257,15 @@
   <canvas id="slingshotCanvas"></canvas>
 
   <button id="classicsBtn">SDG Classics</button>
+  <button id="submitBtn">Add Prompt</button>
+
+  <div id="submitOverlay">
+    <div id="submitForm">
+      <div id="submitLabel">Add to the prompt pool</div>
+      <input id="submitInput" type="text" placeholder="type a prompt, hit enter" maxlength="150" autocomplete="off" />
+      <div id="submitFeedback"></div>
+    </div>
+  </div>
 
   <script>
     // ── Prompts ──────────────────────────────────────────────────────────────
@@ -843,6 +931,16 @@
       if (busy) return;
       busy = true;
       startThinking();
+
+      // User-submitted prompts take priority over AI
+      if (userPrompts.length > 0) {
+        const pick = userPrompts[Math.floor(Math.random() * userPrompts.length)];
+        await showPrompt(pick);
+        busy = false;
+        stopThinking();
+        return;
+      }
+
       try {
         const res = await fetch('/api/generate-prompt', {
           method: 'POST',
@@ -863,6 +961,58 @@
         stopThinking();
       }
     }
+
+    // ── User-submitted prompts ────────────────────────────────────────────────
+    let userPrompts = [];
+
+    async function loadUserPrompts() {
+      try {
+        const res = await fetch('/api/user-prompts');
+        if (res.ok) { const d = await res.json(); userPrompts = d.prompts || []; }
+      } catch {}
+    }
+    loadUserPrompts();
+
+    // Submit overlay
+    const submitOverlay = document.getElementById('submitOverlay');
+    const submitInput   = document.getElementById('submitInput');
+    const submitFeedback = document.getElementById('submitFeedback');
+
+    document.getElementById('submitBtn').addEventListener('click', () => {
+      submitInput.value = '';
+      submitFeedback.textContent = '';
+      submitOverlay.classList.add('open');
+      setTimeout(() => submitInput.focus(), 50);
+    });
+    submitOverlay.addEventListener('click', e => {
+      if (e.target === submitOverlay) submitOverlay.classList.remove('open');
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') submitOverlay.classList.remove('open');
+    });
+    submitInput.addEventListener('keydown', async e => {
+      if (e.key !== 'Enter') return;
+      const text = submitInput.value.trim();
+      if (text.length < 4) { submitFeedback.textContent = 'a bit short...'; return; }
+      submitInput.disabled = true;
+      submitFeedback.textContent = 'saving...';
+      try {
+        const res = await fetch('/api/user-prompts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text }),
+        });
+        if (res.ok) {
+          const { count } = await res.json();
+          userPrompts.push(text);
+          submitFeedback.textContent = `saved — ${count} prompt${count !== 1 ? 's' : ''} in the pool`;
+          setTimeout(() => submitOverlay.classList.remove('open'), 1600);
+        } else {
+          submitFeedback.textContent = 'something went wrong';
+        }
+      } catch { submitFeedback.textContent = 'connection error'; }
+      submitInput.disabled = false;
+    });
 
     // SDG Classics — pull from static list
     document.getElementById('classicsBtn').addEventListener('click', async () => {
