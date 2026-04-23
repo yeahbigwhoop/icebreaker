@@ -20,7 +20,21 @@ module.exports = async function(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { text } = req.body || {};
+    const { text, action } = req.body || {};
+
+    // Remove a prompt from the pool
+    if (action === 'remove') {
+      const prompts = await readPrompts();
+      const updated = prompts.filter(p => p !== text);
+      await put(BLOB_KEY, JSON.stringify(updated), {
+        access: 'public',
+        addRandomSuffix: false,
+        contentType: 'application/json',
+      });
+      return res.status(200).json({ ok: true, count: updated.length });
+    }
+
+    // Add a new prompt
     const trimmed = (text || '').trim().slice(0, 150);
     if (trimmed.length < 4) {
       return res.status(400).json({ error: 'Too short' });
