@@ -149,13 +149,17 @@
       z-index: 22;
     }
 
-    /* SDG Classics button — rotated along bottom-right edge */
-    #classicsBtn {
+    /* Top-right action links */
+    #topLinks {
       position: fixed;
-      bottom: 48px;
-      right: -28px;
-      transform: rotate(-90deg);
-      transform-origin: center center;
+      top: 20px;
+      right: 24px;
+      z-index: 30;
+      display: flex;
+      gap: 22px;
+      align-items: center;
+    }
+    .top-link {
       background: none;
       border: none;
       padding: 0;
@@ -166,36 +170,11 @@
       text-transform: uppercase;
       color: rgba(0,0,0,0.35);
       cursor: pointer;
-      z-index: 30;
       pointer-events: all;
       transition: color 0.2s ease;
       white-space: nowrap;
     }
-    #classicsBtn:hover { color: rgba(0,0,0,0.75); }
-
-    /* Submit prompt — mirrored from SDG Classics, bottom-left */
-    #submitBtn {
-      position: fixed;
-      bottom: 48px;
-      left: -22px;
-      transform: rotate(90deg);
-      transform-origin: center center;
-      background: none;
-      border: none;
-      padding: 0;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 10px;
-      font-weight: 500;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: rgba(0,0,0,0.35);
-      cursor: pointer;
-      z-index: 30;
-      pointer-events: all;
-      transition: color 0.2s ease;
-      white-space: nowrap;
-    }
-    #submitBtn:hover { color: rgba(0,0,0,0.75); }
+    .top-link:hover { color: rgba(0,0,0,0.75); }
 
     /* Submit overlay */
     #submitOverlay {
@@ -278,8 +257,11 @@
   <img id="bucketFront" src="bucket_front.png"  alt="" draggable="false" />
   <canvas id="slingshotCanvas"></canvas>
 
-  <button id="classicsBtn">SDG Classics</button>
-  <button id="submitBtn">Add Prompt</button>
+  <div id="topLinks">
+    <button class="top-link" id="submitBtn">Add Prompt</button>
+    <button class="top-link" id="classicsBtn">SDG Classics</button>
+    <button class="top-link" id="askClaudeBtn">Ask Claude</button>
+  </div>
 
   <div id="submitOverlay">
     <div id="submitForm">
@@ -990,8 +972,9 @@
       }
     }
 
-    // ── User-submitted prompts ────────────────────────────────────────────────
-    let userPrompts = [];
+    // ── User-submitted prompts (List 1) + Graduated classics (List 2) ─────────
+    let userPrompts      = [];   // new submissions — default on score
+    let graduatedClassics = [];  // promoted via ✓ done — joins SDG Classics pool
     let activeUserPrompt = null;
     const doneBtn = document.getElementById('doneBtn');
 
@@ -1001,7 +984,24 @@
         if (res.ok) { const d = await res.json(); userPrompts = d.prompts || []; }
       } catch {}
     }
+    async function loadGraduatedClassics() {
+      try {
+        const res = await fetch('/api/classics-prompts');
+        if (res.ok) { const d = await res.json(); graduatedClassics = d.prompts || []; }
+      } catch {}
+    }
     loadUserPrompts();
+    loadGraduatedClassics();
+
+    // Classics queue: hardcoded prompts + anything graduated via ✓ done
+    let classicsQueue = [];
+    function nextClassic() {
+      const pool = [...prompts, ...graduatedClassics];
+      if (classicsQueue.length === 0) {
+        classicsQueue = [...pool].sort(() => Math.random() - 0.5);
+      }
+      return classicsQueue.pop();
+    }
 
     // Submit overlay
     const submitOverlay = document.getElementById('submitOverlay');
@@ -1044,33 +1044,63 @@
       submitInput.disabled = false;
     });
 
-    // Done button — strikes current user prompt from pool
+    // Done button — moves prompt from List 1 (new) → List 2 (classics)
     doneBtn.addEventListener('click', async () => {
       if (!activeUserPrompt) return;
       const text = activeUserPrompt;
       activeUserPrompt = null;
       userPrompts = userPrompts.filter(p => p !== text);
+      graduatedClassics.push(text);
+      classicsQueue = []; // reset classics queue so it picks up the new addition
       doneBtn.classList.add('struck');
-      doneBtn.textContent = '✓ removed';
+      doneBtn.textContent = '✓ moved to classics';
       setTimeout(() => {
         doneBtn.classList.remove('visible', 'struck');
         doneBtn.textContent = '✓ done';
-      }, 1200);
+      }, 1400);
+      // Sync both lists
       fetch('/api/user-prompts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'remove', text }),
       }).catch(() => {});
+      fetch('/api/classics-prompts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      }).catch(() => {});
     });
 
-    // SDG Classics — pull from static list
+    // SDG Classics — hardcoded list + anything graduated via ✓ done
     document.getElementById('classicsBtn').addEventListener('click', async () => {
       if (busy) return;
       busy = true;
       startThinking();
-      await showPrompt(nextPrompt());
+      await showPrompt(nextClassic());
       busy = false;
       stopThinking();
+    });
+
+    // Ask Claude — AI generation on demand
+    document.getElementById('askClaudeBtn').addEventListener('click', async () => {
+      if (busy) return;
+      busy = true;
+      startThinking();
+      try {
+        const res = await fetch('/api/generate-prompt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ recentPrompts }),
+        });
+        if (!res.ok) throw new Error();
+        const { prompt } = await res.json();
+        await showPrompt(prompt, true);
+      } catch {
+        await showPrompt(nextPrompt());
+      } finally {
+        busy = false;
+        stopThinking();
+      }
     });
 
     // Copy to clipboard on prompt click
@@ -1085,9 +1115,9 @@
       });
     });
 
-    // Spacebar
+    // Spacebar (not when typing in an input)
     document.addEventListener('keydown', e => {
-      if (e.code === 'Space' && e.target.tagName !== 'BUTTON') {
+      if (e.code === 'Space' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') {
         e.preventDefault();
         generate();
       }
