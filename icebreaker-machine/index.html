@@ -590,6 +590,7 @@
     const FLOOR_SETTLE = 0.8;
 
     let pBtn = null, pCup = null, physRaf = null;
+    let lastTimestamp = 0;   // for delta-time normalization
 
     // Flick state
     let dragging = false;
@@ -637,19 +638,26 @@
       };
       scored = false;
       freeFall = false;
+      lastTimestamp = 0;
       if (physRaf) cancelAnimationFrame(physRaf);
       physicsLoop();
     }
 
-    function physicsLoop() {
+    function physicsLoop(timestamp) {
+      // Delta-time: normalize to 60fps baseline so physics are framerate-independent.
+      // Clamp to 3 frames max so a tab blur/resume doesn't launch the ball into orbit.
+      if (!lastTimestamp) lastTimestamp = timestamp;
+      const dt = Math.min((timestamp - lastTimestamp) / (1000 / 60), 3);
+      lastTimestamp = timestamp;
+
       const W = window.innerWidth, H = window.innerHeight;
       if (!pBtn) { physRaf = requestAnimationFrame(physicsLoop); return; }
 
       // Oscillate cup — eases to a stop on score, eases back in on re-grab
       if (pCup) {
         const targetMult = scored ? 0 : 1;
-        cupSpeedMult += (targetMult - cupSpeedMult) * 0.04;
-        pCup.phase += 0.014 * Math.pow(1.2, scoreCount) * cupSpeedMult;
+        cupSpeedMult += (targetMult - cupSpeedMult) * 0.04 * dt;
+        pCup.phase += 0.014 * Math.pow(1.2, scoreCount) * cupSpeedMult * dt;
         const margin = pCup.bucketImgW / 2 + 30;
         pCup.x = margin + (W - margin * 2) * 0.5 * (1 + Math.sin(pCup.phase));
         // Keep y locked to bottom (window resize resilience)
@@ -657,9 +665,9 @@
       }
 
       if (!dragging) {
-        pBtn.vy += GRAVITY;
-        pBtn.x += pBtn.vx;
-        pBtn.y += pBtn.vy;
+        pBtn.vy += GRAVITY * dt;
+        pBtn.x += pBtn.vx * dt;
+        pBtn.y += pBtn.vy * dt;
 
         // pBtn.y = bottom edge of chicken (feet/drumstick tip)
         // Side walls (use half-width for horizontal bounds)
@@ -672,7 +680,7 @@
         if (pBtn.y > H) {
           pBtn.y = H;
           pBtn.vy = -Math.abs(pBtn.vy) * BOUNCE_DAMP;
-          pBtn.vx *= FLOOR_SETTLE;
+          pBtn.vx *= Math.pow(FLOOR_SETTLE, dt);
           if (Math.abs(pBtn.vy) < 1.2) pBtn.vy = 0;
           if (Math.abs(pBtn.vx) < 0.3) pBtn.vx = 0;
           freeFall = false;  // barrier becomes solid again after floor contact
