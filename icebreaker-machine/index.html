@@ -585,7 +585,7 @@
 
     // ── Physics ───────────────────────────────────────────────────────────────
     const BTN_R = 74;
-    const GRAVITY = 0.30;
+    const GRAVITY = 0.55;
     const BOUNCE_DAMP = 0.62;
     const FLOOR_SETTLE = 0.8;
 
@@ -657,7 +657,7 @@
       if (pCup) {
         const targetMult = scored ? 0 : 1;
         cupSpeedMult += (targetMult - cupSpeedMult) * 0.04 * dt;
-        pCup.phase += 0.014 * Math.pow(1.2, scoreCount) * cupSpeedMult * dt;
+        pCup.phase += 0.025 * Math.pow(1.2, scoreCount) * cupSpeedMult * dt;
         const margin = pCup.bucketImgW / 2 + 30;
         pCup.x = margin + (W - margin * 2) * 0.5 * (1 + Math.sin(pCup.phase));
         // Keep y locked to bottom (window resize resilience)
