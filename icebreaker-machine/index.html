@@ -640,7 +640,7 @@
       freeFall = false;
       lastTimestamp = 0;
       if (physRaf) cancelAnimationFrame(physRaf);
-      physicsLoop();
+      physRaf = requestAnimationFrame(physicsLoop);
     }
 
     function physicsLoop(timestamp) {
