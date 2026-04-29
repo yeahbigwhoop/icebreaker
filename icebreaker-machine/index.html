@@ -117,18 +117,16 @@
     #doneBtn:hover { color: rgba(0,0,0,0.7); }
     #doneBtn.struck { color: rgba(0,0,0,0.2); pointer-events: none; }
 
-    /* Face head — draggable ball */
+    /* Chicken — draggable ball */
     #chickenImg {
       position: fixed;
       width: 72px;
-      height: 72px;
-      object-fit: cover;
-      clip-path: circle(50%);
+      height: auto;
       cursor: grab;
       user-select: none;
       pointer-events: all;
       z-index: 20;
-      filter: drop-shadow(0 6px 18px rgba(0,0,0,0.32));
+      filter: drop-shadow(0 4px 12px rgba(0,0,0,0.12));
     }
     #chickenImg:active { cursor: grabbing; }
     #chickenImg.disabled { pointer-events: none; opacity: 0.6; }
@@ -585,7 +583,7 @@
 
     // ── Physics ───────────────────────────────────────────────────────────────
     const BTN_R = 74;
-    const GRAVITY = 0.55;
+    const GRAVITY = 0.62;
     const BOUNCE_DAMP = 0.62;
     const FLOOR_SETTLE = 0.8;
 
@@ -961,23 +959,9 @@
       textEl.classList.add('visible');
     }
 
-    async function loadRandomFace() {
-      try {
-        const res = await fetch('https://randomuser.me/api/?inc=picture&results=1&noinfo');
-        if (!res.ok) return;
-        const data = await res.json();
-        const url = data.results[0].picture.large;
-        const img = document.getElementById('chickenImg');
-        const tmp = new Image();
-        tmp.onload = () => { img.src = url; };
-        tmp.src = url;
-      } catch {}
-    }
-
     async function generate() {
       if (busy) return;
       busy = true;
-      loadRandomFace();
       startThinking();
 
       // User-submitted prompts take priority over AI
@@ -1170,9 +1154,6 @@
         generate();
       }
     });
-
-    // Load a random face immediately on page load
-    loadRandomFace();
 
     // Start physics after chicken image loads so we know its real height
     const _chickenImg = document.getElementById('chickenImg');
