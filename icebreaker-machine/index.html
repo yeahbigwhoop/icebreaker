@@ -273,6 +273,8 @@
   <canvas id="slingshotCanvas"></canvas>
 
   <div id="topLinks">
+    <button class="top-link" id="skipBtn">Give me a prompt</button>
+    <span class="top-pipe">|</span>
     <button class="top-link" id="submitBtn">Add Prompt<span id="promptCount"></span></button>
     <span class="top-pipe">|</span>
     <button class="top-link" id="askClaudeBtn">Ask Claude</button>
@@ -583,7 +585,7 @@
 
     // ── Physics ───────────────────────────────────────────────────────────────
     const BTN_R = 74;
-    const GRAVITY = 0.70;
+    const GRAVITY = 0.85;
     const BOUNCE_DAMP = 0.62;
     const FLOOR_SETTLE = 0.8;
 
@@ -1037,6 +1039,8 @@
     const submitOverlay = document.getElementById('submitOverlay');
     const submitInput   = document.getElementById('submitInput');
     const submitFeedback = document.getElementById('submitFeedback');
+
+    document.getElementById('skipBtn').addEventListener('click', () => { generate(); });
 
     document.getElementById('submitBtn').addEventListener('click', () => {
       submitInput.value = '';
