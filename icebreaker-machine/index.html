@@ -675,15 +675,29 @@
     function closeOverlay() { overlay.classList.remove('visible'); }
 
     const glyphs = '⊕⊗◉⊙◌◦⊠⊞⊟⊘⊛✦✧✶⬡△▽◁▷◊◈⌬⌭⌯⍜⍟⎔⏣'.split('');
+    const COLS = 7;
     let thinkingRaf = null;
+    let thinkingLockTimer = null;
     function startThinking() {
       promptText.style.display = 'none';
       thinkingAnim.classList.add('visible');
       openOverlay();
-      const cols = 7;
+      const locked = [];
+      const current = Array.from({ length: COLS }, () => glyphs[Math.floor(Math.random() * glyphs.length)]);
+      thinkingLockTimer = setInterval(() => {
+        if (locked.length < COLS) locked.push(glyphs[Math.floor(Math.random() * glyphs.length)]);
+      }, 380);
+      let tick = 0;
       function frame() {
-        thinkingAnim.textContent = Array.from({ length: cols }, () =>
-          glyphs[Math.floor(Math.random() * glyphs.length)]
+        tick++;
+        if (tick % 4 === 0) {
+          for (let i = locked.length; i < COLS; i++)
+            current[i] = glyphs[Math.floor(Math.random() * glyphs.length)];
+        }
+        thinkingAnim.innerHTML = Array.from({ length: COLS }, (_, i) =>
+          i < locked.length
+            ? `<span style="opacity:0.6">${locked[i]}</span>`
+            : current[i]
         ).join(' ');
         thinkingRaf = requestAnimationFrame(frame);
       }
@@ -691,6 +705,7 @@
     }
     function stopThinking() {
       if (thinkingRaf) { cancelAnimationFrame(thinkingRaf); thinkingRaf = null; }
+      if (thinkingLockTimer) { clearInterval(thinkingLockTimer); thinkingLockTimer = null; }
       thinkingAnim.classList.remove('visible');
       promptText.style.display = '';
     }
