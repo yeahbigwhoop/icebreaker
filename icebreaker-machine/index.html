@@ -120,10 +120,26 @@
       position: absolute;
       top: 24px;
       left: 28px;
-      width: 48px;
+      width: 34px;
       height: auto;
-      opacity: 0.5;
+      opacity: 0.25;
       pointer-events: none;
+    }
+
+    /* ── Constellation canvas ────────────────────────────────────────────── */
+    #dotField {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      border-radius: 16px;
+    }
+    #skipPanel .panel-title,
+    #skipPanel .sdg-mark {
+      position: relative;
+      z-index: 1;
     }
 
     /* ── Prompt overlay ──────────────────────────────────────────────────── */
@@ -287,13 +303,14 @@
   <div id="mosaic">
     <button class="panel" id="skipPanel">
       <svg class="sdg-mark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 169.1 165.9" aria-hidden="true"><path fill="#fff" d="M85.7-.1c-.4,0-.8,0-1.2,0C39.3-.1,2.2,36.4,1.6,81.7c-.6,45.8,36.1,83.5,81.9,84.1.4,0,.8,0,1.2,0,45.2,0,82.4-36.5,83-81.9C168.2,38.2,131.5.5,85.7-.1ZM84.6,158.3c-.3,0-.7,0-1,0-41.6-.6-75-34.9-74.4-76.5C9.7,40.6,43.4,7.4,84.6,7.4s.7,0,1,0c41.6.6,75,34.9,74.4,76.5-.6,41.2-34.3,74.4-75.4,74.4ZM60.3,96.1c10,0,14.3-5.7,14.3-18.9s-2.8-14.8-11.1-18.1l-3.7-1.4c-4.1-1.6-5.9-3.5-5.9-10.4s2.6-9.2,6.5-9.2,6.3,1.1,6.6,9.1c0,.7.3,1.4.8,1.8.5.4,1.2.5,1.9.3l2.5-.4h.2c1.6-.6,1.6-1.9,1.6-2.4-.3-10.3-4.9-15.5-13.8-15.5s-13.8,5.6-13.8,16.6,2.7,14.3,11.2,17.6l3.7,1.4c3.9,1.5,5.8,3.6,5.8,11.2s-3.1,11.2-6.8,11.2-6.8-1.8-7.4-10.4c0-1-.5-1.5-.8-1.8-.4-.3-1-.6-1.9-.4l-2.6.5c-.7.1-1.8.6-1.8,2.5.5,11.1,5.4,16.7,14.5,16.7ZM119.5,108.1H49.7c-1.3,0-2.3,1-2.3,2.3v10.9c0,7.7,3.3,12.4,10,14.6,3.4,1.1,7.2,1.5,21.9,1.5s28,0,32.5-1.5c6.8-2.2,10-7,10-14.6v-10.9c0-1.3-1-2.3-2.3-2.3ZM114.6,120.8c0,4.4-1.5,6.7-5.2,8-2.2.7-12.9,1.2-30.1,1.2s-16.9-.4-19.4-1.2c-3.7-1.3-5.2-3.6-5.2-8v-5.2h60v5.2ZM122,60.8h-11.5c-1.3,0-2.3,1-2.3,2.3v2.5c0,1.3,1,2.3,2.3,2.3h6.4c0,13.2-.3,14.8-.8,16.5-1,2.9-3.2,4.4-6.5,4.4s-5.5-1.5-6.5-4.4c-.6-1.9-.8-3.5-.8-21s.3-19.1.8-21c1-3,3.1-4.4,6.4-4.4s6.6,2.4,7.4,7.5c.1.7.5,1.2,1,1.6.4.2,1,.5,1.8.2l2.6-.5h.2c1.2-.4,1.8-1.5,1.6-2.8-1.1-8.5-6.3-13.2-14.5-13.2s-11.6,3.2-13.6,9.3c-1,3-1.2,5.6-1.2,23.3s.3,20.3,1.2,23.3c2,6.1,6.7,9.3,13.6,9.3s11.6-3.2,13.6-9.3c1-3,1.2-5.4,1.2-21.2v-2.4c0-1.3-1-2.3-2.3-2.3Z"/></svg>
-      <div class="panel-title">Give me a question</div>
+      <canvas id="dotField"></canvas>
+      <div class="panel-title">Get question</div>
     </button>
     <button class="panel" id="askPanel">
       <div class="panel-title">Ask Claude</div>
     </button>
     <button class="panel" id="submitPanel">
-      <div class="panel-title">Add Question<span class="count-badge" id="promptCount" style="display:none"></span></div>
+      <div class="panel-title">Add Question</div>
     </button>
     <button class="panel" id="classicsPanel">
       <div class="panel-title">SDG Classics</div>
@@ -520,14 +537,63 @@
     const doneBtn      = document.getElementById('doneBtn');
     const copiedHint   = document.getElementById('copiedHint');
 
-    function updatePromptCount() {
-      const badge = document.getElementById('promptCount');
-      if (userPrompts.length > 0) {
-        badge.textContent = userPrompts.length;
-        badge.style.display = 'inline-block';
-      } else {
-        badge.style.display = 'none';
+    function drawConstellation(count) {
+      const cvs = document.getElementById('dotField');
+      if (!cvs) return;
+      const panel = cvs.parentElement;
+      cvs.width  = panel.offsetWidth;
+      cvs.height = panel.offsetHeight;
+      const ctx = cvs.getContext('2d');
+      ctx.clearRect(0, 0, cvs.width, cvs.height);
+      if (count === 0) return;
+
+      // Generate stable-ish random positions seeded by count pattern
+      const dots = [];
+      const pad = 48;
+      // Simple LCG seeded by count so same count → same layout
+      let seed = count * 2654435761;
+      function rand() {
+        seed = (seed * 1664525 + 1013904223) & 0xffffffff;
+        return (seed >>> 0) / 0xffffffff;
       }
+      for (let i = 0; i < count; i++) {
+        dots.push({
+          x: pad + rand() * (cvs.width  - pad * 2),
+          y: pad + rand() * (cvs.height - pad * 2),
+        });
+      }
+
+      // Draw connecting lines for nearby pairs
+      const threshold = Math.min(cvs.width, cvs.height) * 0.28;
+      ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+      ctx.lineWidth = 0.8;
+      for (let i = 0; i < dots.length; i++) {
+        for (let j = i + 1; j < dots.length; j++) {
+          const dx = dots[i].x - dots[j].x;
+          const dy = dots[i].y - dots[j].y;
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          if (dist < threshold) {
+            ctx.globalAlpha = (1 - dist / threshold) * 0.5;
+            ctx.beginPath();
+            ctx.moveTo(dots[i].x, dots[i].y);
+            ctx.lineTo(dots[j].x, dots[j].y);
+            ctx.stroke();
+          }
+        }
+      }
+
+      // Draw dots
+      ctx.globalAlpha = 1;
+      dots.forEach(d => {
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, 2.2, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.fill();
+      });
+    }
+
+    function updatePromptCount() {
+      drawConstellation(userPrompts.length);
     }
 
     async function loadUserPrompts() {
@@ -545,6 +611,7 @@
     }
     loadUserPrompts();
     loadGraduatedClassics();
+    window.addEventListener('resize', () => drawConstellation(userPrompts.length));
 
     function nextClassic() {
       const pool = [...prompts, ...graduatedClassics];
