@@ -118,12 +118,13 @@
     /* ── SDG mark watermark ──────────────────────────────────────────────── */
     .sdg-mark {
       position: absolute;
-      top: 24px;
-      left: 28px;
+      top: 26px;
+      left: 30px;
       width: 34px;
       height: auto;
       opacity: 0.25;
       pointer-events: none;
+      z-index: 1;
     }
 
     /* ── Constellation canvas ────────────────────────────────────────────── */
@@ -136,8 +137,7 @@
       z-index: 0;
       border-radius: 16px;
     }
-    #skipPanel .panel-title,
-    #skipPanel .sdg-mark {
+    #skipPanel .panel-title {
       position: relative;
       z-index: 1;
     }
@@ -537,63 +537,84 @@
     const doneBtn      = document.getElementById('doneBtn');
     const copiedHint   = document.getElementById('copiedHint');
 
-    function drawConstellation(count) {
+    // ── Animated constellation ────────────────────────────────────────────
+    let constellationDots = [];
+    let constellationRaf  = null;
+
+    function initDots(count) {
       const cvs = document.getElementById('dotField');
       if (!cvs) return;
-      const panel = cvs.parentElement;
-      cvs.width  = panel.offsetWidth;
-      cvs.height = panel.offsetHeight;
+      const W = cvs.parentElement.offsetWidth;
+      const H = cvs.parentElement.offsetHeight;
+      cvs.width  = W;
+      cvs.height = H;
+      const pad = 52;
+      const speed = 0.28;
+      constellationDots = Array.from({ length: count }, () => ({
+        x:  pad + Math.random() * (W - pad * 2),
+        y:  pad + Math.random() * (H - pad * 2),
+        vx: (Math.random() - 0.5) * speed,
+        vy: (Math.random() - 0.5) * speed,
+      }));
+    }
+
+    function tickDots() {
+      const cvs = document.getElementById('dotField');
+      if (!cvs) return;
+      const W = cvs.width, H = cvs.height;
       const ctx = cvs.getContext('2d');
-      ctx.clearRect(0, 0, cvs.width, cvs.height);
-      if (count === 0) return;
+      const pad = 6;
+      ctx.clearRect(0, 0, W, H);
 
-      // Generate stable-ish random positions seeded by count pattern
-      const dots = [];
-      const pad = 48;
-      // Simple LCG seeded by count so same count → same layout
-      let seed = count * 2654435761;
-      function rand() {
-        seed = (seed * 1664525 + 1013904223) & 0xffffffff;
-        return (seed >>> 0) / 0xffffffff;
-      }
-      for (let i = 0; i < count; i++) {
-        dots.push({
-          x: pad + rand() * (cvs.width  - pad * 2),
-          y: pad + rand() * (cvs.height - pad * 2),
-        });
-      }
+      // Move & bounce
+      constellationDots.forEach(d => {
+        d.x += d.vx;
+        d.y += d.vy;
+        if (d.x < pad || d.x > W - pad) { d.vx *= -1; d.x = Math.max(pad, Math.min(W - pad, d.x)); }
+        if (d.y < pad || d.y > H - pad) { d.vy *= -1; d.y = Math.max(pad, Math.min(H - pad, d.y)); }
+      });
 
-      // Draw connecting lines for nearby pairs
-      const threshold = Math.min(cvs.width, cvs.height) * 0.28;
-      ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+      // Lines between nearby pairs
+      const threshold = Math.min(W, H) * 0.3;
       ctx.lineWidth = 0.8;
-      for (let i = 0; i < dots.length; i++) {
-        for (let j = i + 1; j < dots.length; j++) {
-          const dx = dots[i].x - dots[j].x;
-          const dy = dots[i].y - dots[j].y;
+      for (let i = 0; i < constellationDots.length; i++) {
+        for (let j = i + 1; j < constellationDots.length; j++) {
+          const dx = constellationDots[i].x - constellationDots[j].x;
+          const dy = constellationDots[i].y - constellationDots[j].y;
           const dist = Math.sqrt(dx*dx + dy*dy);
           if (dist < threshold) {
-            ctx.globalAlpha = (1 - dist / threshold) * 0.5;
+            ctx.globalAlpha = (1 - dist / threshold) * 0.4;
+            ctx.strokeStyle = 'rgba(255,255,255,1)';
             ctx.beginPath();
-            ctx.moveTo(dots[i].x, dots[i].y);
-            ctx.lineTo(dots[j].x, dots[j].y);
+            ctx.moveTo(constellationDots[i].x, constellationDots[i].y);
+            ctx.lineTo(constellationDots[j].x, constellationDots[j].y);
             ctx.stroke();
           }
         }
       }
 
-      // Draw dots
-      ctx.globalAlpha = 1;
-      dots.forEach(d => {
+      // Dots
+      ctx.globalAlpha = 0.75;
+      ctx.fillStyle = '#fff';
+      constellationDots.forEach(d => {
         ctx.beginPath();
-        ctx.arc(d.x, d.y, 2.2, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.arc(d.x, d.y, 2.4, 0, Math.PI * 2);
         ctx.fill();
       });
+
+      constellationRaf = requestAnimationFrame(tickDots);
     }
 
     function updatePromptCount() {
-      drawConstellation(userPrompts.length);
+      if (constellationRaf) { cancelAnimationFrame(constellationRaf); constellationRaf = null; }
+      const count = userPrompts.length;
+      if (count === 0) {
+        const cvs = document.getElementById('dotField');
+        if (cvs) cvs.getContext('2d').clearRect(0, 0, cvs.width, cvs.height);
+        return;
+      }
+      initDots(count);
+      tickDots();
     }
 
     async function loadUserPrompts() {
@@ -611,7 +632,10 @@
     }
     loadUserPrompts();
     loadGraduatedClassics();
-    window.addEventListener('resize', () => drawConstellation(userPrompts.length));
+    window.addEventListener('resize', () => {
+      if (constellationRaf) { cancelAnimationFrame(constellationRaf); constellationRaf = null; }
+      if (userPrompts.length > 0) { initDots(userPrompts.length); tickDots(); }
+    });
 
     function nextClassic() {
       const pool = [...prompts, ...graduatedClassics];
