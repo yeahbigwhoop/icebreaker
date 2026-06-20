@@ -4,296 +4,304 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>The Icebreaker Machine</title>
-  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=DM+Sans:wght@300;400&family=Playfair+Display:ital,wght@0,400;1,400&family=Space+Mono:wght@400&family=Abril+Fatface&family=Bebas+Neue&family=Caveat:wght@400;700&family=Cinzel:wght@400;700&family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Dancing+Script:wght@400;700&family=Darker+Grotesque:wght@300;400&family=EB+Garamond:ital,wght@0,400;1,400&family=Fjalla+One&family=Fraunces:ital,wght@0,100;1,100&family=Gloock:ital@0;1&family=IBM+Plex+Mono:ital,wght@0,300;1,300&family=IBM+Plex+Serif:ital,wght@0,300;1,300&family=Josefin+Sans:wght@100;300&family=Josefin+Slab:wght@100;300&family=Julius+Sans+One&family=Karla:wght@300;400&family=Lato:wght@100;300&family=Libre+Baskerville:ital@0;1&family=Lora:ital,wght@0,400;1,400&family=Merriweather:ital,wght@0,300;1,300&family=Montserrat:wght@100;300&family=Neuton:ital,wght@0,200;1,200&family=Nunito:wght@200;300&family=Old+Standard+TT:ital@0;1&family=Oswald:wght@200;300&family=Outfit:wght@100;200&family=PT+Serif:ital@0;1&family=Raleway:wght@100;300&family=Roboto+Condensed:wght@100;300&family=Roboto+Slab:wght@100;300&family=Rosarivo&family=Rufina&family=Sabon:ital@0;1&family=Syne:wght@400;700&family=Tenor+Sans&family=Tinos:ital@0;1&family=UnifrakturMaguntia&family=Urbanist:wght@100;200&family=Vidaloka&family=Vollkorn:ital,wght@0,400;1,400&family=Work+Sans:wght@100;200&family=Yeseva+One&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     html, body {
       width: 100%; height: 100%;
       overflow: hidden;
-      background: #f5f1ea;
+      background: #111;
+      font-family: 'DM Sans', sans-serif;
     }
 
-    /* Video frame — full viewport, behind everything */
-    .art-wrap {
-      position: fixed;
-      top: 0;
-      left: 0;
+    /* ── Mosaic grid ─────────────────────────────────────────────────────── */
+    #mosaic {
+      display: grid;
+      grid-template-columns: 3fr 2fr;
+      grid-template-rows: 5fr 3fr 1.2fr;
+      gap: 10px;
+      padding: 10px;
       width: 100vw;
       height: 100vh;
-      opacity: 0;
-      overflow: hidden;
-      transition: opacity 1.2s ease;
-      z-index: 1;
-    }
-    .art-wrap.visible { opacity: 1; }
-    #bgVideo {
-      width: 100%; height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-    /* White overlay for legibility */
-    .art-wrap::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: rgba(255,255,255,0.6);
-      pointer-events: none;
+      box-sizing: border-box;
     }
 
-    /* Prompt text — top-left, no background */
-    #promptInner {
-      position: fixed;
-      top: 24px;
-      left: 24px;
-      pointer-events: none;
-      z-index: 15;
-      max-width: 55vw;
-    }
-
-    .prompt-text {
-      font-family: 'DM Sans', sans-serif;
-      font-size: 90px;
-      font-weight: 400;
-      color: #111;
-      text-align: left;
-      line-height: 1.15;
-      letter-spacing: -0.02em;
-      opacity: 0;
-      transition: opacity 1s ease 0.3s;
-      pointer-events: all;
-      cursor: pointer;
-    }
-    .prompt-text.visible { opacity: 1; }
-    .prompt-text:hover { opacity: 0.7; }
-
-    /* AI indicator dot — pulsing when prompt is AI-generated */
-    .ai-dot {
-      display: inline-block;
-      width: 9px;
-      height: 9px;
-      border-radius: 50%;
-      background: rgba(0,0,0,0.5);
-      margin-left: 14px;
-      vertical-align: middle;
-      animation: ai-pulse 2s ease-in-out infinite;
-    }
-    @keyframes ai-pulse {
-      0%, 100% { opacity: 0.4; transform: scale(1); }
-      50%       { opacity: 1;   transform: scale(1.5); }
-    }
-
-    .copied-hint {
-      font-family: 'Special Elite', monospace;
-      font-size: 9px;
-      color: rgba(255,255,255,0.6);
-      letter-spacing: 0.14em;
-      margin-top: 14px;
-      opacity: 0;
-      transition: opacity 0.4s ease;
-      pointer-events: none;
-      text-align: center;
-    }
-    .copied-hint.show { opacity: 1; }
-
-    #doneBtn {
-      display: block;
-      margin-top: 16px;
-      background: none;
+    /* ── Panel base ──────────────────────────────────────────────────────── */
+    .panel {
+      --lift: 5px;
+      --spring: cubic-bezier(.5, 2.5, .7, .7);
+      border-radius: 16px;
       border: none;
-      padding: 0;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 10px;
-      font-weight: 500;
-      letter-spacing: 0.13em;
-      text-transform: uppercase;
-      color: rgba(0,0,0,0.3);
       cursor: pointer;
-      pointer-events: all;
-      opacity: 0;
-      transition: opacity 0.4s ease, color 0.2s ease;
-    }
-    #doneBtn.visible { opacity: 1; }
-    #doneBtn:hover { color: rgba(0,0,0,0.7); }
-    #doneBtn.struck { color: rgba(0,0,0,0.2); pointer-events: none; }
-
-    /* Chicken — draggable ball */
-    #chickenImg {
-      position: fixed;
-      width: 72px;
-      height: auto;
-      cursor: grab;
-      user-select: none;
-      pointer-events: all;
-      z-index: 20;
-      filter: drop-shadow(0 4px 12px rgba(0,0,0,0.12));
-    }
-    #chickenImg:active { cursor: grabbing; }
-    #chickenImg.disabled { pointer-events: none; opacity: 0.6; }
-
-    /* Bucket split into two layers so chicken appears inside:
-       back  = top ~20% of image (rim/opening) — sits behind chicken
-       front = bottom ~80% of image (body)     — sits in front of chicken */
-    #bucketBack {
-      position: fixed;
-      width: 160px;
-      height: auto;
-      pointer-events: none;
-      z-index: 6;
-    }
-    #bucketFront {
-      position: fixed;
-      width: 160px;
-      height: auto;
-      pointer-events: none;
-      z-index: 22;
-    }
-
-    /* Top-right action links */
-    #topLinks {
-      position: fixed;
-      top: 20px;
-      right: 24px;
-      z-index: 30;
       display: flex;
-      gap: 22px;
-      align-items: center;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: flex-end;
+      padding: 28px 32px;
+      position: relative;
+      overflow: hidden;
+      transform: translateY(0);
+      box-shadow: 0 var(--lift) 0 0 rgba(0,0,0,0.35);
+      transition:
+        transform 0.35s var(--spring),
+        box-shadow 0.35s var(--spring),
+        filter 0.15s ease;
+      text-align: left;
     }
-    .top-link {
-      background: none;
-      border: none;
-      padding: 0;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: rgba(0,0,0,0.55);
-      cursor: pointer;
-      pointer-events: all;
-      transition: color 0.2s ease;
-      white-space: nowrap;
+    .panel:hover {
+      transform: translateY(calc(-1 * var(--lift)));
+      box-shadow: 0 calc(var(--lift) * 2) 0 0 rgba(0,0,0,0.35);
+      filter: brightness(1.06);
     }
-    .top-link:hover { color: rgba(0,0,0,0.85); }
-    .top-pipe {
-      color: rgba(0,0,0,0.28);
-      font-size: 11px;
-      font-family: 'DM Sans', sans-serif;
-      user-select: none;
+    .panel:active {
+      transform: translateY(calc(-1 * var(--lift) / 2));
+      transition-duration: 0.08s;
+      filter: brightness(0.96);
     }
-    #promptCount {
-      display: inline-block;
-      font-size: 8px;
-      font-weight: 400;
-      letter-spacing: 0;
-      opacity: 0.7;
-      margin-left: 4px;
-      vertical-align: super;
+    .panel.busy {
+      pointer-events: none;
+      filter: brightness(0.88);
     }
 
-    /* Submit overlay */
-    #submitOverlay {
+    /* ── Panel colors ────────────────────────────────────────────────────── */
+    #skipPanel   { background: #E8383D; grid-row: 1 / 4; grid-column: 1; }
+    #askPanel    { background: #1A56E8; grid-row: 1;     grid-column: 2; }
+    #submitPanel { background: #E07C00; grid-row: 2;     grid-column: 2; }
+    #classicsPanel { background: #18A873; grid-row: 3;   grid-column: 2; }
+
+    /* ── Panel label ─────────────────────────────────────────────────────── */
+    .panel-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.55);
+      margin-bottom: 6px;
+    }
+    .panel-title {
+      font-size: clamp(20px, 2.4vw, 36px);
+      font-weight: 600;
+      color: #fff;
+      line-height: 1.15;
+    }
+    #skipPanel .panel-title {
+      font-size: clamp(28px, 3.8vw, 56px);
+    }
+    .count-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.25);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 600;
+      border-radius: 20px;
+      padding: 1px 7px;
+      margin-left: 7px;
+      vertical-align: middle;
+      letter-spacing: 0.04em;
+    }
+    #classicsPanel .panel-title {
+      font-size: clamp(13px, 1.4vw, 20px);
+    }
+
+    /* ── Prompt overlay ──────────────────────────────────────────────────── */
+    #promptOverlay {
       position: fixed;
       inset: 0;
       z-index: 50;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(245,241,234,0.88);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
+      background: rgba(0,0,0,0.72);
       opacity: 0;
       pointer-events: none;
+      transition: opacity 0.3s ease;
+      padding: 40px;
+    }
+    #promptOverlay.visible {
+      opacity: 1;
+      pointer-events: all;
+    }
+    #promptCard {
+      background: #fff;
+      border-radius: 20px;
+      padding: 52px 60px;
+      max-width: 720px;
+      width: 100%;
+      text-align: center;
+      position: relative;
+    }
+    #promptText {
+      font-size: clamp(22px, 3.2vw, 42px);
+      font-weight: 500;
+      color: #111;
+      line-height: 1.3;
+      cursor: pointer;
+    }
+    #promptText:hover::after {
+      content: ' ↗';
+      font-size: 0.6em;
+      opacity: 0.35;
+    }
+    #copiedHint {
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      color: rgba(0,0,0,0.35);
+      text-transform: uppercase;
+      margin-top: 16px;
+      opacity: 0;
       transition: opacity 0.2s ease;
     }
-    #submitOverlay.open { opacity: 1; pointer-events: all; }
-    #submitForm {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 20px;
-      width: min(520px, 88vw);
+    #copiedHint.show { opacity: 1; }
+
+    .ai-dot {
+      display: inline-block;
+      width: 6px; height: 6px;
+      background: #1A56E8;
+      border-radius: 50%;
+      margin-left: 6px;
+      vertical-align: middle;
+      position: relative;
+      top: -2px;
     }
-    #submitLabel {
+
+    #doneBtn {
+      margin-top: 28px;
+      display: none;
+      background: none;
+      border: 1.5px solid rgba(0,0,0,0.18);
+      border-radius: 40px;
+      padding: 8px 20px;
       font-family: 'DM Sans', sans-serif;
-      font-size: 10px;
+      font-size: 12px;
       font-weight: 500;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: rgba(0,0,0,0.35);
+      letter-spacing: 0.08em;
+      color: rgba(0,0,0,0.45);
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    #doneBtn.visible { display: inline-block; }
+    #doneBtn:hover { color: rgba(0,0,0,0.8); border-color: rgba(0,0,0,0.4); }
+    #doneBtn.struck { color: rgba(0,0,0,0.25); border-color: rgba(0,0,0,0.1); pointer-events: none; }
+
+    #closeOverlay {
+      position: absolute;
+      top: 16px; right: 20px;
+      background: none;
+      border: none;
+      font-size: 22px;
+      color: rgba(0,0,0,0.25);
+      cursor: pointer;
+      line-height: 1;
+      transition: color 0.15s;
+    }
+    #closeOverlay:hover { color: rgba(0,0,0,0.6); }
+
+    /* ── Thinking state ──────────────────────────────────────────────────── */
+    #thinkingDots {
+      display: none;
+      font-size: clamp(22px, 3.2vw, 42px);
+      color: rgba(0,0,0,0.3);
+      letter-spacing: 0.2em;
+    }
+    #thinkingDots.visible { display: block; }
+
+    /* ── Submit overlay ──────────────────────────────────────────────────── */
+    #submitOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    #submitOverlay.open { opacity: 1; pointer-events: all; }
+    #submitBox {
+      background: #fff;
+      border-radius: 18px;
+      padding: 40px 44px;
+      max-width: 520px;
+      width: 90%;
+      text-align: center;
+    }
+    #submitBox h2 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #111;
+      margin-bottom: 6px;
+    }
+    #submitBox p {
+      font-size: 13px;
+      color: rgba(0,0,0,0.45);
+      margin-bottom: 22px;
     }
     #submitInput {
       width: 100%;
+      border: 1.5px solid rgba(0,0,0,0.15);
+      border-radius: 10px;
+      padding: 13px 16px;
       font-family: 'DM Sans', sans-serif;
-      font-size: 24px;
-      font-weight: 300;
+      font-size: 15px;
       color: #111;
-      background: none;
-      border: none;
-      border-bottom: 1px solid rgba(0,0,0,0.2);
-      padding: 10px 0;
       outline: none;
-      text-align: center;
-      letter-spacing: -0.01em;
+      transition: border-color 0.2s;
     }
-    #submitInput::placeholder { color: rgba(0,0,0,0.25); }
+    #submitInput:focus { border-color: #E07C00; }
     #submitFeedback {
-      font-family: 'DM Sans', sans-serif;
-      font-size: 10px;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
+      font-size: 12px;
       color: rgba(0,0,0,0.4);
-      min-height: 14px;
-    }
-
-    /* Canvas overlay — power arc + barrier line only */
-    #slingshotCanvas {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      z-index: 25;
+      margin-top: 10px;
+      min-height: 18px;
     }
   </style>
 </head>
 <body>
 
-  <div class="art-wrap" id="artWrap">
-    <video id="bgVideo" autoplay muted loop playsinline></video>
+  <!-- Mosaic buttons -->
+  <div id="mosaic">
+    <button class="panel" id="skipPanel">
+      <div class="panel-label">Icebreaker Machine</div>
+      <div class="panel-title">Give me a prompt</div>
+    </button>
+    <button class="panel" id="askPanel">
+      <div class="panel-title">Ask Claude</div>
+    </button>
+    <button class="panel" id="submitPanel">
+      <div class="panel-title">Add Prompt<span class="count-badge" id="promptCount" style="display:none"></span></div>
+    </button>
+    <button class="panel" id="classicsPanel">
+      <div class="panel-title">SDG Classics</div>
+    </button>
   </div>
 
-<div id="promptInner" style="background:none;backdrop-filter:none;-webkit-backdrop-filter:none;padding:0">
-    <div class="prompt-text" id="promptText" title="click to copy"></div>
-    <div class="copied-hint" id="copiedHint">copied</div>
-    <button id="doneBtn">✓ done</button>
+  <!-- Prompt overlay -->
+  <div id="promptOverlay">
+    <div id="promptCard">
+      <button id="closeOverlay">×</button>
+      <div id="thinkingDots">· · ·</div>
+      <div id="promptText"></div>
+      <div id="copiedHint">copied</div>
+      <button id="doneBtn">✓ done</button>
+    </div>
   </div>
 
-  <img id="bucketBack"  src="bucket_back.png"  alt="" draggable="false" />
-  <img id="chickenImg"  src="chicken.png" alt="drop me" draggable="false" />
-  <img id="bucketFront" src="bucket_front.png"  alt="" draggable="false" />
-  <canvas id="slingshotCanvas"></canvas>
-
-  <div id="topLinks">
-    <button class="top-link" id="skipBtn">Give me a prompt</button>
-    <span class="top-pipe">|</span>
-    <button class="top-link" id="submitBtn">Add Prompt<span id="promptCount"></span></button>
-    <span class="top-pipe">|</span>
-    <button class="top-link" id="askClaudeBtn">Ask Claude</button>
-    <span class="top-pipe">|</span>
-    <button class="top-link" id="classicsBtn">SDG Classics</button>
-  </div>
-
+  <!-- Submit overlay -->
   <div id="submitOverlay">
-    <div id="submitForm">
-      <div id="submitLabel">Add to the prompt pool</div>
-      <input id="submitInput" type="text" placeholder="type a prompt, hit enter" maxlength="150" autocomplete="off" />
+    <div id="submitBox">
+      <h2>Add a prompt</h2>
+      <p>Press Enter to save. It'll show up next time someone hits "Give me a prompt."</p>
+      <input id="submitInput" type="text" placeholder="What's something no one knows about you?" maxlength="150" />
       <div id="submitFeedback"></div>
     </div>
   </div>
 
   <script>
-    // ── Prompts ──────────────────────────────────────────────────────────────
+    // ── Hardcoded prompts (SDG Classics pool) ─────────────────────────────
     const prompts = [
-      // — personal trivia —
       "Fun fact no one knows about you?",
       "What do you collect?",
       "Origin story behind your name?",
@@ -315,8 +323,6 @@
       "What's something you believed as a kid that turned out to be wrong?",
       "What's your most irrational strong opinion?",
       "What's a word or phrase you overuse?",
-
-      // — current life snapshot —
       "What's your cellphone wallpaper right now?",
       "How many phone numbers do you have memorized?",
       "What's the algorithm putting at the top of your feed?",
@@ -333,8 +339,6 @@
       "What's the weirdest thing you've recently Googled?",
       "What app could you absolutely not live without?",
       "What's something you're currently procrastinating on?",
-
-      // — favorites & preferences —
       "Favorite Thanksgiving dish?",
       "Favorite sandwich?",
       "Favorite fruit?",
@@ -361,8 +365,6 @@
       "Song you know every single word to?",
       "A TV show you've rewatched more than twice?",
       "What's your sign, and does it describe you?",
-
-      // — past & nostalgia —
       "Who was your first best friend?",
       "What's a childhood game or activity that defined your childhood?",
       "What was on the wall of your childhood bedroom?",
@@ -376,8 +378,6 @@
       "First concert?",
       "First job?",
       "Who taught you to drive?",
-
-      // — self-reflection —
       "What's one thing about how you were raised you wish you could've changed?",
       "What's one thing you appreciate about how you were raised?",
       "What's something new you've tried lately?",
@@ -401,8 +401,6 @@
       "Describe your perfect Sunday morning.",
       "What's a small thing that tells you a lot about a person?",
       "What's something you carry with you everywhere?",
-
-      // — hypotheticals & fun —
       "What Guinness record could you set?",
       "You have $5 and you're hungry — what do you buy?",
       "Best looking man and woman ever?",
@@ -416,8 +414,6 @@
       "What would you do with an unexpected free day?",
       "What's something people always ask you for advice on?",
       "What's the most you've spent on a single meal?",
-
-      // — confessional & candid —
       "What's your worst traffic infraction?",
       "Describe your worst date.",
       "What's your most embarrassing phase?",
@@ -433,8 +429,6 @@
       "What genuinely scares you?",
       "What's a noise complaint you've made or received?",
       "What's the most embarrassing thing in your search history?",
-
-      // — quirky details —
       "What are your biggest pet peeves?",
       "Juice or water? (Hawaiian Air style)",
       "What's your Chex Mix recipe?",
@@ -480,534 +474,38 @@
       "What's something you own that's older than you?",
     ];
 
-    // ── Prompt queue — shuffled deck, no repeats until all shown ─────────────
     let promptQueue = [];
-    const recentPrompts = []; // last 6 shown, sent to API to avoid theme repeats
+    const recentPrompts = [];
     function trackRecent(text) {
       recentPrompts.push(text);
       if (recentPrompts.length > 6) recentPrompts.shift();
     }
     function nextPrompt() {
-      if (promptQueue.length === 0) {
-        promptQueue = [...prompts].sort(() => Math.random() - 0.5);
-      }
+      if (promptQueue.length === 0) promptQueue = [...prompts].sort(() => Math.random() - 0.5);
       return promptQueue.pop();
     }
 
-    // ── Video background ──────────────────────────────────────────────────────
-    const bgVideo = document.getElementById('bgVideo');
-
-
-    async function loadVideo() {
-      try {
-        const res = await fetch('/api/random-video');
-        if (!res.ok) throw new Error();
-        const { url } = await res.json();
-        return url;
-      } catch { return null; }
-    }
-
-
-
-    const FONTS = [
-      { family: "'Abril Fatface', serif",              style: 'normal',  fw: '400' },
-      { family: "'Bebas Neue', sans-serif",            style: 'normal',  fw: '400' },
-      { family: "'Caveat', cursive",                   style: 'normal',  fw: '400' },
-      { family: "'Caveat', cursive",                   style: 'normal',  fw: '700' },
-      { family: "'Cinzel', serif",                     style: 'normal',  fw: '400' },
-      { family: "'Cinzel', serif",                     style: 'normal',  fw: '700' },
-      { family: "'Cormorant Garamond', serif",         style: 'normal',  fw: '300' },
-      { family: "'Cormorant Garamond', serif",         style: 'italic',  fw: '300' },
-      { family: "'Dancing Script', cursive",           style: 'normal',  fw: '400' },
-      { family: "'Dancing Script', cursive",           style: 'normal',  fw: '700' },
-      { family: "'Darker Grotesque', sans-serif",      style: 'normal',  fw: '300' },
-      { family: "'DM Sans', sans-serif",               style: 'normal',  fw: '300' },
-      { family: "'EB Garamond', serif",                style: 'normal',  fw: '400' },
-      { family: "'EB Garamond', serif",                style: 'italic',  fw: '400' },
-      { family: "'Fjalla One', sans-serif",            style: 'normal',  fw: '400' },
-      { family: "'Fraunces', serif",                   style: 'normal',  fw: '100' },
-      { family: "'Fraunces', serif",                   style: 'italic',  fw: '100' },
-      { family: "'Gloock', serif",                     style: 'normal',  fw: '400' },
-      { family: "'Gloock', serif",                     style: 'italic',  fw: '400' },
-      { family: "'IBM Plex Mono', monospace",          style: 'normal',  fw: '300' },
-      { family: "'IBM Plex Mono', monospace",          style: 'italic',  fw: '300' },
-      { family: "'IBM Plex Serif', serif",             style: 'normal',  fw: '300' },
-      { family: "'IBM Plex Serif', serif",             style: 'italic',  fw: '300' },
-      { family: "'Josefin Sans', sans-serif",          style: 'normal',  fw: '100' },
-      { family: "'Josefin Slab', serif",               style: 'normal',  fw: '100' },
-      { family: "'Julius Sans One', sans-serif",       style: 'normal',  fw: '400' },
-      { family: "'Karla', sans-serif",                 style: 'normal',  fw: '300' },
-      { family: "'Lato', sans-serif",                  style: 'normal',  fw: '100' },
-      { family: "'Libre Baskerville', serif",          style: 'normal',  fw: '400' },
-      { family: "'Libre Baskerville', serif",          style: 'italic',  fw: '400' },
-      { family: "'Lora', serif",                       style: 'italic',  fw: '400' },
-      { family: "'Merriweather', serif",               style: 'normal',  fw: '300' },
-      { family: "'Merriweather', serif",               style: 'italic',  fw: '300' },
-      { family: "'Montserrat', sans-serif",            style: 'normal',  fw: '100' },
-      { family: "'Neuton', serif",                     style: 'italic',  fw: '200' },
-      { family: "'Nunito', sans-serif",                style: 'normal',  fw: '200' },
-      { family: "'Old Standard TT', serif",            style: 'normal',  fw: '400' },
-      { family: "'Old Standard TT', serif",            style: 'italic',  fw: '400' },
-      { family: "'Oswald', sans-serif",                style: 'normal',  fw: '200' },
-      { family: "'Outfit', sans-serif",                style: 'normal',  fw: '100' },
-      { family: "'PT Serif', serif",                   style: 'italic',  fw: '400' },
-      { family: "'Playfair Display', serif",           style: 'normal',  fw: '400' },
-      { family: "'Playfair Display', serif",           style: 'italic',  fw: '400' },
-      { family: "'Raleway', sans-serif",               style: 'normal',  fw: '100' },
-      { family: "'Roboto Condensed', sans-serif",      style: 'normal',  fw: '100' },
-      { family: "'Roboto Slab', serif",                style: 'normal',  fw: '100' },
-      { family: "'Rosarivo', serif",                   style: 'normal',  fw: '400' },
-      { family: "'Rufina', serif",                     style: 'normal',  fw: '400' },
-      { family: "'Space Mono', monospace",             style: 'normal',  fw: '400' },
-      { family: "'Special Elite', monospace",          style: 'normal',  fw: '400' },
-      { family: "'Syne', sans-serif",                  style: 'normal',  fw: '700' },
-      { family: "'Tenor Sans', sans-serif",            style: 'normal',  fw: '400' },
-      { family: "'Tinos', serif",                      style: 'italic',  fw: '400' },
-      { family: "'UnifrakturMaguntia', cursive",       style: 'normal',  fw: '400' },
-      { family: "'Urbanist', sans-serif",              style: 'normal',  fw: '100' },
-      { family: "'Vidaloka', serif",                   style: 'normal',  fw: '400' },
-      { family: "'Vollkorn', serif",                   style: 'italic',  fw: '400' },
-      { family: "'Work Sans', sans-serif",             style: 'normal',  fw: '100' },
-      { family: "'Yeseva One', serif",                 style: 'normal',  fw: '400' },
-    ];
-
-    // ── Font / layout style ───────────────────────────────────────────────────
-    function applyStyle() {
-      const F = FONTS[Math.floor(Math.random() * FONTS.length)];
-      const mw = `${400 + Math.floor(Math.random() * 500)}px`;  // wider for 90px font
-      const ta = 'left';  // fixed left-align to match top-left text position
-      const text = document.getElementById('promptText');
-      text.style.maxWidth   = mw;
-      text.style.textAlign  = ta;
-      text.style.fontWeight = F.fw;
-      text.style.fontFamily = F.family;
-      text.style.fontStyle  = F.style;
-    }
-
-    // ── Physics ───────────────────────────────────────────────────────────────
-    const BTN_R = 74;
-    const GRAVITY = 1.0;
-    const BOUNCE_DAMP = 0.62;
-    const FLOOR_SETTLE = 0.8;
-
-    let pBtn = null, pCup = null, physRaf = null;
-    let lastTimestamp = 0;   // for delta-time normalization
-
-    // Flick state
-    let dragging = false;
-    let lastDragX = 0, lastDragY = 0;
-    let velHistory = [];
-    let scored = false;
-    let freeFall = false;  // true after drag release — barrier transparent until floor hit
-    let scoreCount = 0;    // increments each score; bucket speeds up 20% per score
-    let cupSpeedMult = 1.0; // eases to 0 on score, back to 1 on re-grab
-
-    const MIN_DROP_HEIGHT = 300; // px above barrier chicken must be lifted to drop through
-
-    function physicsInit() {
-      const W = window.innerWidth, H = window.innerHeight;
-      // Bucket image is 160×175px. Opening (rim) is ~top 12% of image.
-      // We anchor pCup.y to the rim, cupH = inner depth (~80% of image height).
-      const bucketImgW = 160;
-      const bucketImgH = 175;
-      const cupW = bucketImgW * 0.72;          // inner opening (~72% of bucket width)
-      const cupH = bucketImgH * 0.75;          // inner depth
-      const bucketY = H - bucketImgH - 20;     // image top (bucket sits near bottom)
-      const rimOffsetRatio = 0.08;             // rim is 8% down from image top
-      pCup = {
-        x: W * 0.5,
-        y: bucketY + bucketImgH * rimOffsetRatio,   // physics cupTop = bucket rim
-        w: cupW, h: cupH,
-        phase: Math.random() * Math.PI * 2,
-        bucketImgH, bucketImgW, rimOffsetRatio       // store for DOM positioning
-      };
-      // Spawn chicken so its bottom is in the upper third, fully on screen
-      const chEl = document.getElementById('chickenImg');
-      const chH = chEl.offsetHeight || 180;
-      const barrierYSpawn = H * 0.62;
-      // clamp: bottom must be >= chH (fully on screen) and <= barrierYSpawn - 20
-      // Spawn at most 180px above barrier so free-fall never reaches DROP_THRESHOLD (14)
-      // v = sqrt(2 * 0.18 * 180) ≈ 8.1 < 14 — always bounces on barrier naturally
-      const maxFallDist = 180;
-      const spawnY = Math.max(chH + 10, barrierYSpawn - maxFallDist);
-      pBtn = {
-        x: W * (0.25 + Math.random() * 0.5),
-        y: spawnY,
-        vx: (Math.random() - 0.5) * 3,
-        vy: 0,
-        r: BTN_R
-      };
-      scored = false;
-      freeFall = false;
-      lastTimestamp = 0;
-      if (physRaf) cancelAnimationFrame(physRaf);
-      physRaf = requestAnimationFrame(physicsLoop);
-    }
-
-    function physicsLoop(timestamp) {
-      // Delta-time: normalize to 60fps baseline so physics are framerate-independent.
-      // Clamp to 3 frames max so a tab blur/resume doesn't launch the ball into orbit.
-      if (!lastTimestamp) lastTimestamp = timestamp;
-      const dt = Math.min((timestamp - lastTimestamp) / (1000 / 60), 3);
-      lastTimestamp = timestamp;
-
-      const W = window.innerWidth, H = window.innerHeight;
-      if (!pBtn) { physRaf = requestAnimationFrame(physicsLoop); return; }
-
-      // Oscillate cup — eases to a stop on score, eases back in on re-grab
-      if (pCup) {
-        const targetMult = scored ? 0 : 1;
-        cupSpeedMult += (targetMult - cupSpeedMult) * 0.04 * dt;
-        pCup.phase += 0.025 * Math.pow(1.2, scoreCount) * cupSpeedMult * dt;
-        const margin = pCup.bucketImgW / 2 + 30;
-        pCup.x = margin + (W - margin * 2) * 0.5 * (1 + Math.sin(pCup.phase));
-        // Keep y locked to bottom (window resize resilience)
-        pCup.y = H - pCup.bucketImgH * (1 - pCup.rimOffsetRatio) - 20;
-      }
-
-      if (!dragging) {
-        pBtn.vy += GRAVITY * dt;
-        pBtn.x += pBtn.vx * dt;
-        pBtn.y += pBtn.vy * dt;
-
-        // pBtn.y = bottom edge of chicken (feet/drumstick tip)
-        // Side walls (use half-width for horizontal bounds)
-        if (pBtn.x - BTN_R < 0)  { pBtn.x = BTN_R;     pBtn.vx =  Math.abs(pBtn.vx) * BOUNCE_DAMP; }
-        if (pBtn.x + BTN_R > W)  { pBtn.x = W - BTN_R; pBtn.vx = -Math.abs(pBtn.vx) * BOUNCE_DAMP; }
-        // Ceiling — top of chicken = pBtn.y - chickenH (approximate with 2*BTN_R)
-        const chH2 = document.getElementById('chickenImg').offsetHeight || BTN_R * 2;
-        if (pBtn.y - chH2 < 0) { pBtn.y = chH2; pBtn.vy = Math.abs(pBtn.vy) * BOUNCE_DAMP; }
-        // Floor
-        if (pBtn.y > H) {
-          pBtn.y = H;
-          pBtn.vy = -Math.abs(pBtn.vy) * BOUNCE_DAMP;
-          pBtn.vx *= Math.pow(FLOOR_SETTLE, dt);
-          if (Math.abs(pBtn.vy) < 1.2) pBtn.vy = 0;
-          if (Math.abs(pBtn.vx) < 0.3) pBtn.vx = 0;
-          freeFall = false;  // barrier becomes solid again after floor contact
-        }
-
-        // ── Barrier ───────────────────────────────────────────────────────────
-        // freeFall = true after user releases chicken — barrier stays open until floor hit
-        const barrierY = H * 0.62;
-        if (!freeFall && pBtn.y > barrierY && pBtn.vy > 0) {
-          pBtn.y = barrierY;
-          pBtn.vy = -Math.abs(pBtn.vy) * BOUNCE_DAMP;
-        }
-
-        // ── Cup physics ───────────────────────────────────────────────────────
-        // pBtn.x/y = center/bottom-tip of chicken (collision point = drumstick tip)
-        // Only engage when chicken tip is actually below the cup rim level
-        if (pCup && !scored) {
-          const lw = pCup.x - pCup.w / 2;
-          const rw = pCup.x + pCup.w / 2;
-          const cupTop = pCup.y;
-          const cupBot = pCup.y + pCup.h;
-          const tipX   = pBtn.x;   // horizontal center
-          const tipY   = pBtn.y;   // bottom tip
-
-          // Exterior left wall — only if tip is in cup's height band and chicken is to the LEFT
-          if (tipY > cupTop && tipY < cupBot && tipX < lw && tipX + BTN_R > lw && pBtn.vx > 0) {
-            pBtn.x = lw - BTN_R;
-            pBtn.vx = -Math.abs(pBtn.vx) * BOUNCE_DAMP;
-          }
-          // Exterior right wall
-          if (tipY > cupTop && tipY < cupBot && tipX > rw && tipX - BTN_R < rw && pBtn.vx < 0) {
-            pBtn.x = rw + BTN_R;
-            pBtn.vx = Math.abs(pBtn.vx) * BOUNCE_DAMP;
-          }
-          // Cup floor — tip went below cupBot while inside x range
-          if (tipX > lw && tipX < rw && tipY > cupBot && pBtn.vy > 0) {
-            pBtn.y = cupBot;
-            pBtn.vy = -Math.abs(pBtn.vy) * BOUNCE_DAMP;
-            pBtn.vx *= 0.8;
-            if (Math.abs(pBtn.vy) < 0.8) pBtn.vy = 0;
-            if (Math.abs(pBtn.vx) < 0.2) pBtn.vx = 0;
-          }
-
-          // ── Score: tip entered through the opening from above ─────────────
-          const inX = tipX > lw && tipX < rw;
-          const inY = tipY > cupTop && tipY < cupTop + pCup.h * 0.5;
-          if (!busy && inX && inY && pBtn.vy > 2) {
-            scored = true;
-            scoreCount++;
-            pBtn.vx = 0;
-            pBtn.vy = 0;
-            pBtn.x  = pCup.x;
-            generate();
-            // chicken stays in bucket until user grabs it again (see onDragStart)
-          }
-        }
-
-        // While scored — keep chicken inside cup, let it settle on the floor
-        if (pCup && scored) {
-          const lw = pCup.x - pCup.w / 2;
-          const rw = pCup.x + pCup.w / 2;
-          const cupBot = pCup.y + pCup.h;
-          if (pBtn.y > cupBot && pBtn.vy > 0) {
-            pBtn.y = cupBot;
-            pBtn.vy = -Math.abs(pBtn.vy) * BOUNCE_DAMP;
-            pBtn.vx *= 0.8;
-            if (Math.abs(pBtn.vy) < 0.8) pBtn.vy = 0;
-          }
-          if (pBtn.x < lw + BTN_R) { pBtn.x = lw + BTN_R; pBtn.vx = Math.abs(pBtn.vx) * 0.4; }
-          if (pBtn.x > rw - BTN_R) { pBtn.x = rw - BTN_R; pBtn.vx = -Math.abs(pBtn.vx) * 0.4; }
-        }
-      }
-
-      // Apply positions to DOM
-      const chickenEl = document.getElementById('chickenImg');
-      const cw = chickenEl.offsetWidth  || BTN_R * 2;
-      const ch = chickenEl.offsetHeight || BTN_R * 2;
-      chickenEl.style.left = (pBtn.x - cw / 2) + 'px';
-      chickenEl.style.top  = (pBtn.y - ch) + 'px';    // bottom of chicken = pBtn.y
-
-      // Bucket: position both layers identically — same src, same coords
-      const bucketBackEl  = document.getElementById('bucketBack');
-      const bucketFrontEl = document.getElementById('bucketFront');
-      const bw = bucketBackEl.offsetWidth  || pCup.bucketImgW;
-      const bh = bucketBackEl.offsetHeight || pCup.bucketImgH;
-      const bLeft = (pCup.x - bw / 2) + 'px';
-      const bTop  = (pCup.y - bh * pCup.rimOffsetRatio) + 'px';
-      bucketBackEl.style.left  = bLeft;
-      bucketBackEl.style.top   = bTop;
-      bucketFrontEl.style.left = bLeft;
-      bucketFrontEl.style.top  = bTop;
-
-      drawSling();
-      physRaf = requestAnimationFrame(physicsLoop);
-    }
-
-    // ── Flick / power-arc ────────────────────────────────────────────────────
-    function flickSpeed() {
-      if (velHistory.length < 2) return 0;
-      const win = velHistory.filter(v => Date.now() - v.t < 80);
-      if (win.length < 2) return 0;
-      const f = win[0], l = win[win.length - 1];
-      const dt = (l.t - f.t) / 16;
-      if (dt <= 0) return 0;
-      const dx = l.x - f.x, dy = l.y - f.y;
-      return Math.sqrt(dx*dx + dy*dy) / dt;
-    }
-
-    function drawSling() {
-      const cvs = document.getElementById('slingshotCanvas');
-      const ctx = cvs.getContext('2d');
-      cvs.width = window.innerWidth;
-      cvs.height = window.innerHeight;
-      ctx.clearRect(0, 0, cvs.width, cvs.height);
-
-      // ── Barrier line — fades as chicken is lifted to MIN_DROP_HEIGHT, gone in freeFall
-      const barrierY = cvs.height * 0.62;
-      let barrierAlpha = freeFall ? 0 : 0.55;
-      if (dragging && pBtn) {
-        const ballHeight = barrierY - pBtn.y;          // px above barrier
-        const ratio = Math.max(0, Math.min(1, ballHeight / MIN_DROP_HEIGHT));
-        barrierAlpha = 0.55 * (1 - ratio);             // 0.55 at ground → 0 at min height
-      }
-      if (barrierAlpha > 0.005) {
-        ctx.save();
-        ctx.setLineDash([8, 8]);
-        ctx.strokeStyle = `rgba(0,0,0,${barrierAlpha})`;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(0, barrierY);
-        ctx.lineTo(cvs.width, barrierY);
-        ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.restore();
-      }
-
-      // ── Power arc while dragging ─────────────────────────────────────────────
-      if (!dragging) return;
-      const spd = flickSpeed();
-      const MAX = 18;
-      const power = Math.min(1, spd / MAX);
-      if (power < 0.05) return;
-
-      ctx.save();
-      ctx.strokeStyle = `rgba(0,0,0,${0.25 + power * 0.45})`;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.arc(pBtn.x, pBtn.y, BTN_R + 10 + power * 16,
-              -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * power);
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    function onDragStart(cx, cy) {
-      dragging = true;
-      freeFall = false;  // re-grab closes the barrier again
-      // Release chicken from bucket if it was scored
-      if (scored) {
-        scored = false;
-      }
-      lastDragX = cx; lastDragY = cy;
-      velHistory = [];
-      pBtn.vx = 0; pBtn.vy = 0;
-    }
-    function onDragMove(cx, cy) {
-      if (!dragging) return;
-      const barrierY = window.innerHeight * 0.62;
-      pBtn.x += cx - lastDragX;
-      pBtn.y += cy - lastDragY;
-      // Hard barrier — chicken bottom cannot cross the line while dragging
-      if (pBtn.y > barrierY) pBtn.y = barrierY;
-      lastDragX = cx; lastDragY = cy;
-      velHistory.push({ x: cx, y: cy, t: Date.now() });
-      if (velHistory.length > 30) velHistory.shift();
-    }
-    function onDragEnd() {
-      if (!dragging) return;
-      dragging = false;
-      // Only open barrier if chicken was lifted high enough above the line
-      const _barrierY = window.innerHeight * 0.62;
-      if (pBtn && (_barrierY - pBtn.y) >= MIN_DROP_HEIGHT) {
-        freeFall = true;
-      }
-
-      const win = velHistory.filter(v => Date.now() - v.t < 80);
-      if (win.length >= 2) {
-        const f = win[0], l = win[win.length - 1];
-        const dt = (l.t - f.t) / 16;
-        if (dt > 0) {
-          const rawVx = (l.x - f.x) / dt;
-          const rawVy = (l.y - f.y) / dt;
-          const spd = Math.sqrt(rawVx*rawVx + rawVy*rawVy);
-          const MAX = 22;
-          const scale = spd > MAX ? MAX / spd : 1;
-          pBtn.vx = rawVx * scale;
-          pBtn.vy = rawVy * scale;
-          // Generation now triggered only by cup landing, not flick release
-        }
-      }
-      velHistory = [];
-    }
-
-    const chickenEl = document.getElementById('chickenImg');
-    chickenEl.addEventListener('mousedown',  e => { e.preventDefault(); onDragStart(e.clientX, e.clientY); });
-    document.addEventListener('mousemove', e => onDragMove(e.clientX, e.clientY));
-    document.addEventListener('mouseup',   () => onDragEnd());
-    chickenEl.addEventListener('touchstart',  e => { e.preventDefault(); const t = e.touches[0]; onDragStart(t.clientX, t.clientY); }, { passive: false });
-    document.addEventListener('touchmove', e => { if (dragging) { e.preventDefault(); const t = e.touches[0]; onDragMove(t.clientX, t.clientY); } }, { passive: false });
-    document.addEventListener('touchend',  () => onDragEnd());
-
-    // ── Thinking words ────────────────────────────────────────────────────────
-    const THINKING = [
-      'pondering', 'ruminating', 'cogitating', 'deliberating',
-      'pontificating', 'bamboozling', 'conjuring', 'philosophizing',
-      'conspiring', 'noodling', 'marinating', 'extrapolating',
-      'divining', 'channeling', 'intuiting', 'scheming',
-      'vibing', 'reckoning', 'calculating', 'theorizing'
-    ];
-    let thinkIdx = 0, thinkTimer = null;
-
-    function startThinking() {
-      thinkIdx = Math.floor(Math.random() * THINKING.length);
-      const el = document.getElementById('chickenImg');
-      el.classList.add('disabled');
-      thinkTimer = setInterval(() => { thinkIdx++; }, 380);
-    }
-    function stopThinking() {
-      clearInterval(thinkTimer);
-      const el = document.getElementById('chickenImg');
-      el.classList.remove('disabled');
-    }
-
-    // ── State ────────────────────────────────────────────────────────────────
+    // ── State ─────────────────────────────────────────────────────────────
     let busy = false;
-
-    async function showPrompt(finalText, isAI = false) {
-      const textEl = document.getElementById('promptText');
-      const artWrap = document.getElementById('artWrap');
-
-      // Reset done button for each new prompt
-      doneBtn.classList.remove('visible', 'struck');
-      doneBtn.textContent = '✓ done';
-
-      artWrap.classList.remove('visible');
-      textEl.classList.remove('visible');
-
-      const videoPromise = loadVideo();
-      await new Promise(r => setTimeout(r, 350));
-
-      // Shuffle phase
-      textEl.style.transition = 'none';
-      textEl.style.opacity = '1';
-      const delays = [100, 100, 110, 120, 140, 170, 210, 260, 330];
-      for (const ms of delays) {
-        textEl.textContent = prompts[Math.floor(Math.random() * prompts.length)];
-        await new Promise(r => setTimeout(r, ms));
-      }
-
-      textEl.textContent = finalText;
-      trackRecent(finalText);
-      if (isAI) {
-        const dot = document.createElement('span');
-        dot.className = 'ai-dot';
-        textEl.appendChild(dot);
-      }
-      // Font stays as the default DM Sans (same as shuffle) — no applyStyle() call
-      textEl.style.transition = '';
-      textEl.style.opacity = '';
-
-      const url = await videoPromise;
-      if (url) {
-        bgVideo.src = url;
-        bgVideo.load();
-        bgVideo.oncanplay = () => { bgVideo.playbackRate = 0.7; };
-      }
-      void artWrap.offsetHeight;
-      artWrap.classList.add('visible');
-      textEl.classList.add('visible');
-    }
-
-    async function generate() {
-      if (busy) return;
-      busy = true;
-      startThinking();
-
-      // User-submitted prompts take priority over AI
-      if (userPrompts.length > 0) {
-        const pick = userPrompts[Math.floor(Math.random() * userPrompts.length)];
-        activeUserPrompt = pick;
-        await showPrompt(pick);
-        doneBtn.classList.add('visible');
-        busy = false;
-        stopThinking();
-        return;
-      }
-
-      try {
-        const res = await fetch('/api/generate-prompt', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ recentPrompts }),
-        });
-        if (!res.ok) {
-          const txt = await res.text();
-          throw new Error(`${res.status}: ${txt}`);
-        }
-        const { prompt } = await res.json();
-        await showPrompt(prompt, true);
-      } catch (err) {
-        console.error('[icebreaker] API failed, using static list:', err);
-        await showPrompt(nextPrompt());
-      } finally {
-        busy = false;
-        stopThinking();
-      }
-    }
-
-    // ── User-submitted prompts (List 1) + Graduated classics (List 2) ─────────
-    let userPrompts      = [];   // new submissions — default on score
-    let graduatedClassics = [];  // promoted via ✓ done — joins SDG Classics pool
+    let userPrompts = [];
+    let graduatedClassics = [];
     let activeUserPrompt = null;
-    const doneBtn = document.getElementById('doneBtn');
+    let classicsQueue = [];
+
+    const overlay      = document.getElementById('promptOverlay');
+    const promptText   = document.getElementById('promptText');
+    const thinkingDots = document.getElementById('thinkingDots');
+    const doneBtn      = document.getElementById('doneBtn');
+    const copiedHint   = document.getElementById('copiedHint');
 
     function updatePromptCount() {
-      const el = document.getElementById('promptCount');
-      el.textContent = userPrompts.length > 0 ? userPrompts.length : '';
+      const badge = document.getElementById('promptCount');
+      if (userPrompts.length > 0) {
+        badge.textContent = userPrompts.length;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
     }
 
     async function loadUserPrompts() {
@@ -1026,24 +524,123 @@
     loadUserPrompts();
     loadGraduatedClassics();
 
-    // Classics queue: hardcoded prompts + anything graduated via ✓ done
-    let classicsQueue = [];
     function nextClassic() {
       const pool = [...prompts, ...graduatedClassics];
-      if (classicsQueue.length === 0) {
-        classicsQueue = [...pool].sort(() => Math.random() - 0.5);
-      }
+      if (classicsQueue.length === 0) classicsQueue = [...pool].sort(() => Math.random() - 0.5);
       return classicsQueue.pop();
     }
 
-    // Submit overlay
-    const submitOverlay = document.getElementById('submitOverlay');
-    const submitInput   = document.getElementById('submitInput');
+    function setBusy(val) {
+      busy = val;
+      ['skipPanel','askPanel','classicsPanel'].forEach(id => {
+        document.getElementById(id).classList.toggle('busy', val);
+      });
+    }
+
+    function openOverlay() { overlay.classList.add('visible'); }
+    function closeOverlay() { overlay.classList.remove('visible'); }
+
+    function startThinking() {
+      promptText.style.display = 'none';
+      thinkingDots.classList.add('visible');
+      openOverlay();
+    }
+    function stopThinking() {
+      thinkingDots.classList.remove('visible');
+      promptText.style.display = '';
+    }
+
+    async function showPrompt(text, isAI = false) {
+      doneBtn.classList.remove('visible', 'struck');
+      doneBtn.textContent = '✓ done';
+
+      // Quick shuffle
+      promptText.style.display = '';
+      const delays = [90, 90, 100, 120, 150, 200, 260, 340];
+      for (const ms of delays) {
+        promptText.textContent = prompts[Math.floor(Math.random() * prompts.length)];
+        await new Promise(r => setTimeout(r, ms));
+      }
+      promptText.textContent = text;
+      trackRecent(text);
+      if (isAI) {
+        const dot = document.createElement('span');
+        dot.className = 'ai-dot';
+        promptText.appendChild(dot);
+      }
+    }
+
+    async function generate() {
+      if (busy) return;
+      setBusy(true);
+      startThinking();
+
+      if (userPrompts.length > 0) {
+        const pick = userPrompts[Math.floor(Math.random() * userPrompts.length)];
+        activeUserPrompt = pick;
+        await showPrompt(pick);
+        doneBtn.classList.add('visible');
+        stopThinking();
+        setBusy(false);
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/generate-prompt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ recentPrompts }),
+        });
+        if (!res.ok) throw new Error();
+        const { prompt } = await res.json();
+        await showPrompt(prompt, true);
+      } catch {
+        await showPrompt(nextPrompt());
+      } finally {
+        stopThinking();
+        setBusy(false);
+      }
+    }
+
+    // ── Button wiring ─────────────────────────────────────────────────────
+    document.getElementById('skipPanel').addEventListener('click', () => generate());
+
+    document.getElementById('askPanel').addEventListener('click', async () => {
+      if (busy) return;
+      setBusy(true);
+      startThinking();
+      try {
+        const res = await fetch('/api/generate-prompt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ recentPrompts }),
+        });
+        if (!res.ok) throw new Error();
+        const { prompt } = await res.json();
+        await showPrompt(prompt, true);
+      } catch {
+        await showPrompt(nextPrompt());
+      } finally {
+        stopThinking();
+        setBusy(false);
+      }
+    });
+
+    document.getElementById('classicsPanel').addEventListener('click', async () => {
+      if (busy) return;
+      setBusy(true);
+      startThinking();
+      await showPrompt(nextClassic());
+      stopThinking();
+      setBusy(false);
+    });
+
+    // ── Submit overlay ────────────────────────────────────────────────────
+    const submitOverlay  = document.getElementById('submitOverlay');
+    const submitInput    = document.getElementById('submitInput');
     const submitFeedback = document.getElementById('submitFeedback');
 
-    document.getElementById('skipBtn').addEventListener('click', () => { generate(); });
-
-    document.getElementById('submitBtn').addEventListener('click', () => {
+    document.getElementById('submitPanel').addEventListener('click', () => {
       submitInput.value = '';
       submitFeedback.textContent = '';
       submitOverlay.classList.add('open');
@@ -1053,7 +650,10 @@
       if (e.target === submitOverlay) submitOverlay.classList.remove('open');
     });
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') submitOverlay.classList.remove('open');
+      if (e.key === 'Escape') {
+        submitOverlay.classList.remove('open');
+        closeOverlay();
+      }
     });
     submitInput.addEventListener('keydown', async e => {
       if (e.key !== 'Enter') return;
@@ -1080,7 +680,7 @@
       submitInput.disabled = false;
     });
 
-    // Done button — moves prompt from List 1 (new) → List 2 (classics)
+    // ── Done button ───────────────────────────────────────────────────────
     doneBtn.addEventListener('click', async () => {
       if (!activeUserPrompt) return;
       const text = activeUserPrompt;
@@ -1088,14 +688,13 @@
       userPrompts = userPrompts.filter(p => p !== text);
       updatePromptCount();
       graduatedClassics.push(text);
-      classicsQueue = []; // reset classics queue so it picks up the new addition
+      classicsQueue = [];
       doneBtn.classList.add('struck');
       doneBtn.textContent = '✓ moved to classics';
       setTimeout(() => {
         doneBtn.classList.remove('visible', 'struck');
         doneBtn.textContent = '✓ done';
       }, 1400);
-      // Sync both lists
       fetch('/api/user-prompts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1108,67 +707,17 @@
       }).catch(() => {});
     });
 
-    // SDG Classics — hardcoded list + anything graduated via ✓ done
-    document.getElementById('classicsBtn').addEventListener('click', async () => {
-      if (busy) return;
-      busy = true;
-      startThinking();
-      await showPrompt(nextClassic());
-      busy = false;
-      stopThinking();
-    });
+    // ── Prompt card interactions ───────────────────────────────────────────
+    document.getElementById('closeOverlay').addEventListener('click', closeOverlay);
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeOverlay(); });
 
-    // Ask Claude — AI generation on demand
-    document.getElementById('askClaudeBtn').addEventListener('click', async () => {
-      if (busy) return;
-      busy = true;
-      startThinking();
-      try {
-        const res = await fetch('/api/generate-prompt', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ recentPrompts }),
-        });
-        if (!res.ok) throw new Error();
-        const { prompt } = await res.json();
-        await showPrompt(prompt, true);
-      } catch {
-        await showPrompt(nextPrompt());
-      } finally {
-        busy = false;
-        stopThinking();
-      }
-    });
-
-    // Copy to clipboard on prompt click
-    document.getElementById('promptText').addEventListener('click', e => {
-      e.stopPropagation();
-      const text = document.getElementById('promptText').textContent;
+    promptText.addEventListener('click', () => {
+      const text = promptText.textContent;
       if (!text) return;
       navigator.clipboard.writeText(text).then(() => {
-        const hint = document.getElementById('copiedHint');
-        hint.classList.add('show');
-        setTimeout(() => hint.classList.remove('show'), 1400);
+        copiedHint.classList.add('show');
+        setTimeout(() => copiedHint.classList.remove('show'), 1400);
       });
-    });
-
-    // Spacebar (not when typing in an input)
-    document.addEventListener('keydown', e => {
-      if (e.code === 'Space' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') {
-        e.preventDefault();
-        generate();
-      }
-    });
-
-    // Start physics after chicken image loads so we know its real height
-    const _chickenImg = document.getElementById('chickenImg');
-    if (_chickenImg.complete) {
-      physicsInit();
-    } else {
-      _chickenImg.addEventListener('load', physicsInit);
-    }
-    window.addEventListener('resize', () => {
-      // Physics velocities stay; positions self-correct on next wall bounce
     });
   </script>
 </body>
