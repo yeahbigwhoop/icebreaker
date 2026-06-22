@@ -63,6 +63,7 @@
       text-align: left;
     }
     .panel:hover {
+      transform: translateY(calc(-1 * var(--lift)));
       box-shadow: 0 calc(var(--lift) * 2) 0 0 rgba(0,0,0,0.35);
       filter: brightness(1.06);
     }
@@ -961,16 +962,6 @@
       panel.addEventListener('click', playClick);
     });
 
-    // ── Parallax tilt ─────────────────────────────────────────────────────
-    document.querySelectorAll('.panel').forEach(panel => {
-      panel.addEventListener('mousemove', e => {
-        const r = panel.getBoundingClientRect();
-        const x = (e.clientX - r.left) / r.width - 0.5;
-        const y = (e.clientY - r.top) / r.height - 0.5;
-        panel.style.transform = `perspective(700px) rotateY(${x * 9}deg) rotateX(${-y * 9}deg) translateY(-5px)`;
-      });
-      panel.addEventListener('mouseleave', () => { panel.style.transform = ''; });
-    });
 
     // ── SDG face blink ────────────────────────────────────────────────────
     (function scheduleBlink() {
