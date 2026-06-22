@@ -254,15 +254,20 @@
     #closeOverlay:hover { color: rgba(0,0,0,0.7); }
 
     /* ── Thinking state ──────────────────────────────────────────────────── */
-    #thinkingAnim {
-      display: none;
-      font-family: monospace;
-      font-size: clamp(18px, 2.4vw, 32px);
-      color: rgba(0,0,0,0.22);
-      letter-spacing: 0.18em;
-      min-height: 1.4em;
-    }
+    #thinkingAnim { display: none; }
     #thinkingAnim.visible { display: block; }
+    #thinkingAnim span {
+      display: inline-block;
+      font-size: 28px;
+      color: rgba(0,0,0,0.18);
+      animation: waveDot 1.4s ease-in-out infinite;
+    }
+    #thinkingAnim span:nth-child(2) { animation-delay: 0.2s; }
+    #thinkingAnim span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes waveDot {
+      0%, 80%, 100% { opacity: 0.2; transform: translateY(0); }
+      40% { opacity: 0.7; transform: translateY(-7px); }
+    }
 
     /* ── Submit overlay ──────────────────────────────────────────────────── */
     #submitOverlay {
@@ -341,7 +346,7 @@
   <div id="promptOverlay">
     <div id="promptCard">
       <button id="closeOverlay">×</button>
-      <div id="thinkingAnim"></div>
+      <div id="thinkingAnim"><span>·</span><span>·</span><span>·</span></div>
       <div id="promptText"></div>
       <div id="copiedHint">copied</div>
       <div id="modalActions">
@@ -694,38 +699,12 @@
     function openOverlay() { overlay.classList.add('visible'); }
     function closeOverlay() { overlay.classList.remove('visible'); }
 
-    const glyphs = '⊕⊗◉⊙◌◦⊠⊞⊟⊘⊛✦✧✶⬡△▽◁▷◊◈⌬⌭⌯⍜⍟⎔⏣'.split('');
-    const COLS = 7;
-    let thinkingRaf = null;
-    let thinkingLockTimer = null;
     function startThinking() {
       promptText.style.display = 'none';
       thinkingAnim.classList.add('visible');
       openOverlay();
-      const locked = [];
-      const current = Array.from({ length: COLS }, () => glyphs[Math.floor(Math.random() * glyphs.length)]);
-      thinkingLockTimer = setInterval(() => {
-        if (locked.length < COLS) locked.push(glyphs[Math.floor(Math.random() * glyphs.length)]);
-      }, 380);
-      let tick = 0;
-      function frame() {
-        tick++;
-        if (tick % 4 === 0) {
-          for (let i = locked.length; i < COLS; i++)
-            current[i] = glyphs[Math.floor(Math.random() * glyphs.length)];
-        }
-        thinkingAnim.innerHTML = Array.from({ length: COLS }, (_, i) =>
-          i < locked.length
-            ? `<span style="opacity:0.6">${locked[i]}</span>`
-            : current[i]
-        ).join(' ');
-        thinkingRaf = requestAnimationFrame(frame);
-      }
-      frame();
     }
     function stopThinking() {
-      if (thinkingRaf) { cancelAnimationFrame(thinkingRaf); thinkingRaf = null; }
-      if (thinkingLockTimer) { clearInterval(thinkingLockTimer); thinkingLockTimer = null; }
       thinkingAnim.classList.remove('visible');
       promptText.style.display = '';
     }
@@ -919,6 +898,7 @@
       document.addEventListener(evt, () => getAudio(), { once: true })
     );
     function playHover(freq) {
+      if (!audioCtx || audioCtx.state !== 'running') return;
       const ctx = getAudio();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
