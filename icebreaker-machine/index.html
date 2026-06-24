@@ -603,6 +603,10 @@
     let constellationRaf  = null;
     let animTime = 0;
     let mousePos = { x: null, y: null };
+    let mouseVel = { x: 0, y: 0 };
+    // Pick one cursor "personality" at random each load
+    const CURSOR_MODES = ['repel', 'orbit', 'swipe', 'slowmo', 'node'];
+    const cursorMode = CURSOR_MODES[Math.floor(Math.random() * CURSOR_MODES.length)];
 
     const _sdgSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 169.1 165.9"><path fill="#fff" d="M85.7-.1c-.4,0-.8,0-1.2,0C39.3-.1,2.2,36.4,1.6,81.7c-.6,45.8,36.1,83.5,81.9,84.1.4,0,.8,0,1.2,0,45.2,0,82.4-36.5,83-81.9C168.2,38.2,131.5.5,85.7-.1ZM84.6,158.3c-.3,0-.7,0-1,0-41.6-.6-75-34.9-74.4-76.5C9.7,40.6,43.4,7.4,84.6,7.4s.7,0,1,0c41.6.6,75,34.9,74.4,76.5-.6,41.2-34.3,74.4-75.4,74.4ZM60.3,96.1c10,0,14.3-5.7,14.3-18.9s-2.8-14.8-11.1-18.1l-3.7-1.4c-4.1-1.6-5.9-3.5-5.9-10.4s2.6-9.2,6.5-9.2,6.3,1.1,6.6,9.1c0,.7.3,1.4.8,1.8.5.4,1.2.5,1.9.3l2.5-.4h.2c1.6-.6,1.6-1.9,1.6-2.4-.3-10.3-4.9-15.5-13.8-15.5s-13.8,5.6-13.8,16.6,2.7,14.3,11.2,17.6l3.7,1.4c3.9,1.5,5.8,3.6,5.8,11.2s-3.1,11.2-6.8,11.2-6.8-1.8-7.4-10.4c0-1-.5-1.5-.8-1.8-.4-.3-1-.6-1.9-.4l-2.6.5c-.7.1-1.8.6-1.8,2.5.5,11.1,5.4,16.7,14.5,16.7ZM119.5,108.1H49.7c-1.3,0-2.3,1-2.3,2.3v10.9c0,7.7,3.3,12.4,10,14.6,3.4,1.1,7.2,1.5,21.9,1.5s28,0,32.5-1.5c6.8-2.2,10-7,10-14.6v-10.9c0-1.3-1-2.3-2.3-2.3ZM114.6,120.8c0,4.4-1.5,6.7-5.2,8-2.2.7-12.9,1.2-30.1,1.2s-16.9-.4-19.4-1.2c-3.7-1.3-5.2-3.6-5.2-8v-5.2h60v5.2ZM122,60.8h-11.5c-1.3,0-2.3,1-2.3,2.3v2.5c0,1.3,1,2.3,2.3,2.3h6.4c0,13.2-.3,14.8-.8,16.5-1,2.9-3.2,4.4-6.5,4.4s-5.5-1.5-6.5-4.4c-.6-1.9-.8-3.5-.8-21s.3-19.1.8-21c1-3,3.1-4.4,6.4-4.4s6.6,2.4,7.4,7.5c.1.7.5,1.2,1,1.6.4.2,1,.5,1.8.2l2.6-.5h.2c1.2-.4,1.8-1.5,1.6-2.8-1.1-8.5-6.3-13.2-14.5-13.2s-11.6,3.2-13.6,9.3c-1,3-1.2,5.6-1.2,23.3s.3,20.3,1.2,23.3c2,6.1,6.7,9.3,13.6,9.3s11.6-3.2,13.6-9.3c1-3,1.2-5.4,1.2-21.2v-2.4c0-1.3-1-2.3-2.3-2.3Z"/></svg>`;
     const sdgFaceImg = new Image();
@@ -728,13 +732,22 @@
       ctx.clearRect(0, 0, W, H);
       animTime += 0.016;
 
+      // Slow-mo bubble: faces near cursor move in slow motion (time dilation)
+      const slowmoOn = cursorMode === 'slowmo' && mousePos.x !== null;
+
       // Rotation wander + movement + wall bounce
       constellationDots.forEach(d => {
         d.rotVel += (Math.random() - 0.5) * 0.0003;
         d.rotVel *= 0.998;
-        d.rot += d.rotVel;
-        d.x += d.vx;
-        d.y += d.vy;
+        let ts = 1;
+        if (slowmoOn) {
+          const cdx = d.x - mousePos.x, cdy = d.y - mousePos.y;
+          const cd = Math.sqrt(cdx*cdx + cdy*cdy);
+          if (cd < 110) ts = 0.15 + 0.85 * (cd / 110);
+        }
+        d.rot += d.rotVel * ts;
+        d.x += d.vx * ts;
+        d.y += d.vy * ts;
         const spd = Math.sqrt(d.vx*d.vx + d.vy*d.vy);
         if (spd > maxSpeed) { d.vx = d.vx/spd*maxSpeed; d.vy = d.vy/spd*maxSpeed; }
         if (d.x < facePad)   { d.vx =  Math.abs(d.vx); d.x = facePad;   d.rotVel += (Math.random()-0.5)*0.04; }
@@ -743,21 +756,38 @@
         if (d.y > H-facePad) { d.vy = -Math.abs(d.vy); d.y = H-facePad; d.rotVel += (Math.random()-0.5)*0.04; }
       });
 
-      // Cursor repulsion
-      if (mousePos.x !== null) {
-        const cursorR = 75;
+      // Cursor interaction — behavior depends on the mode chosen at load
+      if (mousePos.x !== null && (cursorMode === 'repel' || cursorMode === 'orbit' || cursorMode === 'swipe')) {
+        const cursorR = cursorMode === 'swipe' ? 90 : 75;
         constellationDots.forEach(d => {
           const cdx = d.x - mousePos.x;
           const cdy = d.y - mousePos.y;
           const dist = Math.sqrt(cdx*cdx + cdy*cdy);
-          if (dist < cursorR && dist > 0.1) {
-            const force = (cursorR - dist) / cursorR * 0.18;
+          if (dist >= cursorR || dist <= 0.1) return;
+          const falloff = (cursorR - dist) / cursorR;
+          if (cursorMode === 'repel') {
+            const force = falloff * 0.18;
             d.vx += cdx/dist * force;
             d.vy += cdy/dist * force;
             d.rotVel += (Math.random()-0.5)*0.025;
+          } else if (cursorMode === 'orbit') {
+            // Pull inward + tangential nudge → faces swirl around the cursor
+            const pull = falloff * 0.04;
+            d.vx -= cdx/dist * pull;
+            d.vy -= cdy/dist * pull;
+            d.vx += -cdy/dist * pull * 1.6;
+            d.vy +=  cdx/dist * pull * 1.6;
+            d.rotVel += 0.004;
+          } else { // swipe — flick faces in the direction the mouse is moving
+            const push = falloff * 0.5;
+            d.vx += mouseVel.x * push * 0.1;
+            d.vy += mouseVel.y * push * 0.1;
+            d.rotVel += (mouseVel.x - mouseVel.y) * 0.002 * falloff;
           }
         });
       }
+      mouseVel.x *= 0.85;
+      mouseVel.y *= 0.85;
 
       // Single O(N²) pass: repulsion + styled lines
       const threshold = Math.min(W, H) * 0.3;
@@ -815,6 +845,26 @@
         }
       }
       if (hasDash) ctx.setLineDash([]);
+
+      // Node mode: the cursor itself joins the constellation — styled lines reach out to nearby faces
+      if (cursorMode === 'node' && mousePos.x !== null) {
+        const reach = Math.min(W, H) * 0.45;
+        constellationDots.forEach((d, i) => {
+          const cdx = d.x - mousePos.x, cdy = d.y - mousePos.y;
+          const dist = Math.sqrt(cdx*cdx + cdy*cdy);
+          if (dist >= reach) return;
+          ctx.globalAlpha = (1 - dist / reach) * 0.55;
+          const style = i % 6;
+          if (style === 2) { ctx.setLineDash([4, 7]); } else { ctx.setLineDash([]); }
+          if (style === 0)      drawElectricLine(ctx, mousePos.x, mousePos.y, d.x, d.y);
+          else if (style === 1) drawWavyLine(ctx, mousePos.x, mousePos.y, d.x, d.y);
+          else if (style === 2) { ctx.beginPath(); ctx.moveTo(mousePos.x, mousePos.y); ctx.lineTo(d.x, d.y); ctx.stroke(); }
+          else if (style === 3) drawSpringLine(ctx, mousePos.x, mousePos.y, d.x, d.y);
+          else if (style === 4) drawRopeLine(ctx, mousePos.x, mousePos.y, d.x, d.y);
+          else                  drawDottedChain(ctx, mousePos.x, mousePos.y, d.x, d.y);
+        });
+        ctx.setLineDash([]);
+      }
 
       // Draw SDG faces with individual rotation
       if (sdgFaceImg.complete && sdgFaceImg.naturalWidth > 0) {
@@ -887,10 +937,13 @@
       panel.addEventListener('mousemove', e => {
         const cvs = document.getElementById('dotField');
         const rect = cvs.getBoundingClientRect();
-        mousePos.x = e.clientX - rect.left;
-        mousePos.y = e.clientY - rect.top;
+        const nx = e.clientX - rect.left;
+        const ny = e.clientY - rect.top;
+        if (mousePos.x !== null) { mouseVel.x = nx - mousePos.x; mouseVel.y = ny - mousePos.y; }
+        mousePos.x = nx;
+        mousePos.y = ny;
       });
-      panel.addEventListener('mouseleave', () => { mousePos.x = null; mousePos.y = null; });
+      panel.addEventListener('mouseleave', () => { mousePos.x = null; mousePos.y = null; mouseVel.x = 0; mouseVel.y = 0; });
     })();
 
     function nextClassic() {
