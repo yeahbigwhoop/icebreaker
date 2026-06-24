@@ -6,7 +6,8 @@ async function readGraduated() {
   try {
     const { blobs } = await list({ prefix: 'icebreaker-classics-graduated' });
     if (!blobs.length) return [];
-    const res = await fetch(blobs[0].url + '?t=' + Date.now());
+    const latest = blobs.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt))[0];
+    const res = await fetch(latest.url + '?t=' + Date.now());
     return await res.json();
   } catch { return []; }
 }
