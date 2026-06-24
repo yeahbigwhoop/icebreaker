@@ -219,7 +219,7 @@
       align-items: center;
     }
     .modal-btn {
-      --lift: 5px;
+      --lift: 8px;
       --spring: cubic-bezier(.5, 2.5, .7, .7);
       display: none;
       background: transparent;
@@ -649,7 +649,7 @@
       cvs.width  = W;
       cvs.height = H;
       const pad = 52;
-      const speed = 0.28;
+      const speed = 0.39;
       constellationDots = Array.from({ length: count }, () => ({
         x:  pad + Math.random() * (W - pad * 2),
         y:  pad + Math.random() * (H - pad * 2),
