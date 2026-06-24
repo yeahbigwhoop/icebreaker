@@ -641,6 +641,61 @@
       ctx.stroke();
     }
 
+    function drawSpringLine(ctx, x1, y1, x2, y2) {
+      const dx = x2 - x1, dy = y2 - y1;
+      const len = Math.sqrt(dx*dx + dy*dy);
+      if (len < 1) return;
+      const nx = -dy/len, ny = dx/len;
+      const coils = Math.max(3, Math.floor(len / 14));
+      const amp = 5;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      for (let k = 1; k <= coils * 2; k++) {
+        const t = k / (coils * 2);
+        const side = k % 2 === 0 ? amp : -amp;
+        ctx.lineTo(x1 + dx*t + nx*side, y1 + dy*t + ny*side);
+      }
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+
+    function drawRopeLine(ctx, x1, y1, x2, y2) {
+      const dx = x2 - x1, dy = y2 - y1;
+      const len = Math.sqrt(dx*dx + dy*dy);
+      if (len < 1) return;
+      const nx = -dy/len, ny = dx/len;
+      const segs = Math.max(8, Math.floor(len / 6));
+      const amp = Math.min(len * 0.05, 4);
+      for (let strand = 0; strand < 2; strand++) {
+        const phase = strand * Math.PI + animTime * 2.5;
+        ctx.beginPath();
+        for (let k = 0; k <= segs; k++) {
+          const t = k / segs;
+          const wave = Math.sin(t * Math.PI * 5 + phase) * amp;
+          const px = x1 + dx*t + nx*wave, py = y1 + dy*t + ny*wave;
+          k === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      }
+    }
+
+    function drawDottedChain(ctx, x1, y1, x2, y2) {
+      const dx = x2 - x1, dy = y2 - y1;
+      const len = Math.sqrt(dx*dx + dy*dy);
+      if (len < 1) return;
+      const spacing = 9;
+      const count = Math.floor(len / spacing);
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,255,255,1)';
+      for (let k = 1; k < count; k++) {
+        const t = k / count;
+        ctx.beginPath();
+        ctx.arc(x1 + dx*t, y1 + dy*t, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
     function initDots(count) {
       const cvs = document.getElementById('dotField');
       if (!cvs) return;
@@ -649,7 +704,7 @@
       cvs.width  = W;
       cvs.height = H;
       const pad = 52;
-      const speed = 0.39;
+      const speed = 0.55;
       constellationDots = Array.from({ length: count }, () => ({
         x:  pad + Math.random() * (W - pad * 2),
         y:  pad + Math.random() * (H - pad * 2),
@@ -711,18 +766,24 @@
           // Styled connection lines
           if (dist < threshold) {
             ctx.globalAlpha = (1 - dist / threshold) * 0.45;
-            const style = (i * 13 + j * 7) % 3;
+            const style = (i * 13 + j * 7) % 6;
             if (style === 2 && !hasDash) { ctx.setLineDash([4, 7]); hasDash = true; }
             if (style !== 2 && hasDash)  { ctx.setLineDash([]);     hasDash = false; }
             if (style === 0) {
               drawElectricLine(ctx, constellationDots[i].x, constellationDots[i].y, constellationDots[j].x, constellationDots[j].y);
             } else if (style === 1) {
               drawWavyLine(ctx, constellationDots[i].x, constellationDots[i].y, constellationDots[j].x, constellationDots[j].y);
-            } else {
+            } else if (style === 2) {
               ctx.beginPath();
               ctx.moveTo(constellationDots[i].x, constellationDots[i].y);
               ctx.lineTo(constellationDots[j].x, constellationDots[j].y);
               ctx.stroke();
+            } else if (style === 3) {
+              drawSpringLine(ctx, constellationDots[i].x, constellationDots[i].y, constellationDots[j].x, constellationDots[j].y);
+            } else if (style === 4) {
+              drawRopeLine(ctx, constellationDots[i].x, constellationDots[i].y, constellationDots[j].x, constellationDots[j].y);
+            } else {
+              drawDottedChain(ctx, constellationDots[i].x, constellationDots[i].y, constellationDots[j].x, constellationDots[j].y);
             }
           }
         }
