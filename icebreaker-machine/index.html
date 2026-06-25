@@ -29,15 +29,38 @@
       box-sizing: border-box;
     }
 
-    @media (max-width: 600px) {
+    @media (max-width: 768px) {
+      /* Keep 2-column layout; left (Get a question) is 60% */
       #mosaic {
-        grid-template-columns: 1fr;
-        grid-template-rows: 5fr 2fr 1.5fr 1fr;
+        grid-template-columns: 3fr 2fr;
       }
-      #skipPanel   { grid-row: 1; grid-column: 1; }
-      #askPanel    { grid-row: 2; grid-column: 1; }
-      #submitPanel { grid-row: 3; grid-column: 1; }
-      #classicsPanel { grid-row: 4; grid-column: 1; }
+      /* Right-column panels: text anchors to bottom-right */
+      #askPanel, #submitPanel, #classicsPanel {
+        align-items: flex-end;
+        text-align: right;
+      }
+      /* Uniform text size across all 3 right-column panels */
+      #askPanel .panel-title,
+      #submitPanel .panel-title,
+      #classicsPanel .panel-title {
+        font-size: 16px;
+      }
+      /* "Get a question" title 20% larger on mobile */
+      #skipPanel .panel-title {
+        font-size: clamp(34px, 7vw, 56px);
+      }
+      /* Question reveal: stack buttons vertically, reduce size 40% */
+      #modalActions {
+        flex-direction: column;
+        align-items: center;
+        gap: 14px;
+        margin-top: 32px;
+      }
+      .modal-btn {
+        --lift: 5px;
+        padding: 16px 40px;
+        font-size: 16px;
+      }
     }
 
     /* ── Panel base ──────────────────────────────────────────────────────── */
@@ -738,7 +761,7 @@
       cvs.height = H;
       computeTextObstacle();
       const pad = 52;
-      const speed = 0.77;
+      const speed = 0.92;
       constellationDots = Array.from({ length: count }, () => ({
         x:  pad + Math.random() * (W - pad * 2),
         y:  pad + Math.random() * (H - pad * 2),
@@ -757,7 +780,7 @@
       const faceSize = 34;
       const facePad = faceSize / 2 + 4;
       const collideD = faceSize * 0.85;
-      const maxSpeed = 1.4;
+      const maxSpeed = 1.68;
       ctx.clearRect(0, 0, W, H);
       animTime += 0.016;
 
