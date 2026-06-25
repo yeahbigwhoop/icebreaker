@@ -813,7 +813,7 @@
         if (d.x > W-facePad) { d.vx = -Math.abs(d.vx); d.x = W-facePad; d.rotVel += (Math.random()-0.5)*0.04; }
         if (d.y < facePad)   { d.vy =  Math.abs(d.vy); d.y = facePad;   d.rotVel += (Math.random()-0.5)*0.04; }
         if (d.y > H-facePad) { d.vy = -Math.abs(d.vy); d.y = H-facePad; d.rotVel += (Math.random()-0.5)*0.04; }
-        resolveTextCollision(d, faceSize / 2);
+        resolveTextCollision(d, 4);
       });
 
       // Cursor interaction — behavior depends on the mode chosen at load
