@@ -776,7 +776,7 @@
       const faceSize = 34;
       const facePad = faceSize / 2 + 4;
       const collideD = faceSize * 0.85;
-      const maxSpeed = 1.68;
+      const maxSpeed = 2.6;
       ctx.clearRect(0, 0, W, H);
       animTime += 0.016;
 
@@ -798,7 +798,7 @@
 
       // Cursor interaction — behavior depends on the mode chosen at load
       if (mousePos.x !== null && (cursorMode === 'repel' || cursorMode === 'orbit' || cursorMode === 'swipe')) {
-        const cursorR = cursorMode === 'swipe' ? 90 : 75;
+        const cursorR = cursorMode === 'swipe' ? 90 : cursorMode === 'repel' ? 55 : 75;
         constellationDots.forEach(d => {
           const cdx = d.x - mousePos.x;
           const cdy = d.y - mousePos.y;
@@ -806,10 +806,10 @@
           if (dist >= cursorR || dist <= 0.1) return;
           const falloff = (cursorR - dist) / cursorR;
           if (cursorMode === 'repel') {
-            const force = falloff * 0.18;
+            const force = falloff * falloff * 1.2;
             d.vx += cdx/dist * force;
             d.vy += cdy/dist * force;
-            d.rotVel += (Math.random()-0.5)*0.025;
+            d.rotVel += (Math.random()-0.5)*0.10;
           } else if (cursorMode === 'orbit') {
             // Pull inward + tangential nudge → faces swirl around the cursor
             const pull = falloff * 0.04;
