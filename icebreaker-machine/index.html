@@ -26,6 +26,7 @@
       padding: 10px;
       width: 100vw;
       height: 100vh;
+      height: 100dvh;
       box-sizing: border-box;
     }
 
@@ -33,6 +34,10 @@
       /* Keep 2-column layout; left (Get a question) is 60% */
       #mosaic {
         grid-template-columns: 3fr 2fr;
+      }
+      /* Nudge text closer to the lower-left corner of each card */
+      .panel {
+        padding: 18px 20px;
       }
       /* Uniform text size across all 3 right-column panels */
       #askPanel .panel-title,
