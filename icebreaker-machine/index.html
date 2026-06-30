@@ -1096,7 +1096,8 @@
       startThinking();
 
       if (userPrompts.length > 0) {
-        const pick = userPrompts[Math.floor(Math.random() * userPrompts.length)];
+        const pool = userPrompts.length > 1 ? userPrompts.filter(p => p !== activeUserPrompt) : userPrompts;
+        const pick = pool[Math.floor(Math.random() * pool.length)];
         activeUserPrompt = pick;
         await showPrompt(pick);
         doneBtn.classList.add('visible');
